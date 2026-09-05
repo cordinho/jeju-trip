@@ -130,6 +130,9 @@ main{padding:10px 12px 8px}
 .edbody{flex:0 0 100%;width:100%;min-width:0;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
 .edtitle{font-size:12px;font-weight:700;color:var(--mute);margin-bottom:12px}
 .edbody .actions button{flex:1}
+/* 시각 고정이 폼 맨 위로 올라오면서 아래 "머무는 시간"과 붙어 보인다.
+   .switch:last-of-type 가 아래 테두리를 지우므로 여백으로만 끊어준다. */
+.edbody .switch{padding-top:0;margin-bottom:10px}
 #edHome{display:none}
 .time{width:52px;flex:none;padding-top:1px}
 .time .t{font-size:15px;font-weight:700;letter-spacing:-.02em}

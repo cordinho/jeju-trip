@@ -803,6 +803,9 @@ main{padding:10px 12px 8px}
 .edbody{flex:0 0 100%;width:100%;min-width:0;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
 .edtitle{font-size:12px;font-weight:700;color:var(--mute);margin-bottom:12px}
 .edbody .actions button{flex:1}
+/* 시각 고정이 폼 맨 위로 올라오면서 아래 "머무는 시간"과 붙어 보인다.
+   .switch:last-of-type 가 아래 테두리를 지우므로 여백으로만 끊어준다. */
+.edbody .switch{padding-top:0;margin-bottom:10px}
 #edHome{display:none}
 .time{width:52px;flex:none;padding-top:1px}
 .time .t{font-size:15px;font-weight:700;letter-spacing:-.02em}
@@ -930,6 +933,24 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
 <div id="edHome" hidden>
   <div class="edbody" id="edBody">
     <div class="edtitle" id="edTitle">일정</div>
+
+    <div class="switch">
+      <div><b>시각 고정</b><small>항공기·렌터카처럼 시간이 정해진 일정</small></div>
+      <button class="tg" id="fFixOn" aria-pressed="false"></button>
+    </div>
+    <label class="f" id="fixWrap" style="display:none;margin-top:12px"><span>고정 시각</span>
+      <input class="inp" id="fFix" type="time"></label>
+
+    <label class="f"><span>머무는 시간 (분)</span>
+      <input class="inp" id="fStay" type="number" min="0" step="5" value="60"></label>
+    <div class="chips" style="margin:-6px 0 14px">
+      <button class="chip" data-stay="0">0분</button>
+      <button class="chip" data-stay="30">30분</button>
+      <button class="chip" data-stay="60">1시간</button>
+      <button class="chip" data-stay="90">1.5시간</button>
+      <button class="chip" data-stay="120">2시간</button>
+    </div>
+
     <label class="f"><span>장소 · 일정 이름</span>
       <input class="inp" id="fName" placeholder="예: 비자림"></label>
 
@@ -947,16 +968,6 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
     </div>
     <button class="chip" id="btnPickHere" style="margin-bottom:14px">지도를 눌러 위치 지정</button>
 
-    <label class="f"><span>머무는 시간 (분)</span>
-      <input class="inp" id="fStay" type="number" min="0" step="5" value="60"></label>
-    <div class="chips" style="margin:-6px 0 14px">
-      <button class="chip" data-stay="0">0분</button>
-      <button class="chip" data-stay="30">30분</button>
-      <button class="chip" data-stay="60">1시간</button>
-      <button class="chip" data-stay="90">1.5시간</button>
-      <button class="chip" data-stay="120">2시간</button>
-    </div>
-
     <label class="f"><span>다음 장소까지 이동수단</span></label>
     <div class="chips" style="margin:-8px 0 16px">
       <button class="chip" data-move="auto">자동</button>
@@ -966,13 +977,6 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
       <button class="chip" data-move="ferry">배</button>
       <button class="chip" data-move="none">계산 안 함</button>
     </div>
-
-    <div class="switch">
-      <div><b>시각 고정</b><small>항공기·렌터카처럼 시간이 정해진 일정</small></div>
-      <button class="tg" id="fFixOn" aria-pressed="false"></button>
-    </div>
-    <label class="f" id="fixWrap" style="display:none;margin-top:12px"><span>고정 시각</span>
-      <input class="inp" id="fFix" type="time"></label>
 
     <label class="f"><span>메모</span>
       <textarea class="inp" id="fNote" rows="2" placeholder="예약번호, 오픈시간 등"></textarea></label>
