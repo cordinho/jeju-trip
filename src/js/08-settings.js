@@ -11,7 +11,7 @@ document.getElementById('btnPoi').onclick=()=>{
     b.className='poi';
     b.innerHTML=`${esc(p[0])}<small>${esc(p[3])}</small>`;
     b.onclick=()=>{
-      S.days[curDay].items.push(it(p[0],[p[1],p[2]],90,null,p[3]));
+      S.days[curDay].items.push(it(p[0],[p[1],p[2]],null,p[3]));
       save(); closeSheets(); render(true); refreshOsrm(); toast(`${p[0]} 추가`);
     };
     el.appendChild(b);

@@ -11,40 +11,40 @@ const SEHWA = [33.5245, 126.8577];     // 세화민속오일시장
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-// ver 2: 실제 도로 경로(OSRM)를 기본으로 켠다. 02-state.js 의 migrate() 가 ver 1 로
-// 저장돼 있던 기존 데이터도 한 번 올려준다.
+// ver 3: 일정마다 시간은 "도착 시각(at)" 하나뿐이다. 고정시각(fix)·체류시간(stay)은 없앴다.
+// 02-state.js 의 migrate() 가 예전 형식으로 저장돼 있던 데이터도 한 번 올려준다.
 function seed(){ return {
-  ver: 2,
+  ver: 3,
   cfg: { walkKm:1, walkSp:4.5, driveSp:40, detour:1.35, buffer:5, osrm:true },
   days: [
     { id:'d1', label:'10/29', dow:'목', start:'14:50', items:[
-      it('집 출발', null, 0, '14:50', '', 'none'),
-      it('김포공항', AIRPORT_GIMPO, 40, '16:00', '수하물·탑승 준비'),
-      it('이스타항공 출발', AIRPORT_GIMPO, 0, '16:40', '예약번호 ZZUQQE', 'air'),
-      it('제주공항 도착 · 엄빠 만나기', AIRPORT_JEJU, 30, '18:00', '렌터카 영업소까지 셔틀', 'drive'),
-      it('롯데렌터카 인수', LOTTE_JEJU, 30, '18:30', '셀토스 26-22-587705', 'drive'),
-      it('저녁식사', null, 60, null, '장소 미정'),
-      it('숙소 도착 (하도39)', STAY, 0, null, '제주시 구좌읍 면수2길 39'),
+      it('집 출발', null, '14:50', '', 'none'),
+      it('김포공항', AIRPORT_GIMPO, '16:00', '수하물·탑승 준비'),
+      it('이스타항공 출발', AIRPORT_GIMPO, '16:40', '예약번호 ZZUQQE', 'air'),
+      it('제주공항 도착 · 엄빠 만나기', AIRPORT_JEJU, '18:00', '렌터카 영업소까지 셔틀', 'drive'),
+      it('롯데렌터카 인수', LOTTE_JEJU, '18:30', '셀토스 26-22-587705', 'drive'),
+      it('저녁식사', null, '19:00', '장소 미정'),
+      it('숙소 도착 (하도39)', STAY, '20:00', '제주시 구좌읍 면수2길 39'),
     ]},
     { id:'d2', label:'10/30', dow:'금', start:'09:00', items:[
-      it('아침식사 · 모다정', [33.5250,126.8571], 60, '09:00', '모다정 8시 오픈 / 재연식당 10시 오픈'),
-      it('세화민속오일시장 산책', SEHWA, 90, '10:00', '오일장에서 먹어도 됨'),
+      it('아침식사 · 모다정', [33.5250,126.8571], '09:00', '모다정 8시 오픈 / 재연식당 10시 오픈'),
+      it('세화민속오일시장 산책', SEHWA, '10:00', '오일장에서 먹어도 됨'),
     ]},
     { id:'d3', label:'10/31', dow:'토', start:'09:15', items:[
-      it('언니네 제주 도착', AIRPORT_JEJU, 15, '09:15', '', 'drive'),
-      it('롯데렌터카 인수', LOTTE_JEJU, 30, '09:30', '셀토스 26-22-587792'),
-      it('숙소 합류 · 휴식', STAY, 120, '10:30'),
+      it('언니네 제주 도착', AIRPORT_JEJU, '09:15', '', 'drive'),
+      it('롯데렌터카 인수', LOTTE_JEJU, '09:30', '셀토스 26-22-587792'),
+      it('숙소 합류 · 휴식', STAY, '10:30'),
     ]},
     { id:'d4', label:'11/01', dow:'일', start:'11:00', items:[
-      it('숙소 체크아웃', STAY, 0, null),
-      it('렌터카 반납', LOTTE_JEJU, 30, '14:30'),
-      it('엄빠 여수행 아시아나 출발', AIRPORT_JEJU, 0, '15:35', '예약번호 ERNE2B'),
-      it('에어서울 출발', AIRPORT_JEJU, 0, '16:05', '예약번호 MAAVDV'),
+      it('숙소 체크아웃', STAY, '11:00'),
+      it('렌터카 반납', LOTTE_JEJU, '14:30'),
+      it('엄빠 여수행 아시아나 출발', AIRPORT_JEJU, '15:35', '예약번호 ERNE2B'),
+      it('에어서울 출발', AIRPORT_JEJU, '16:05', '예약번호 MAAVDV'),
     ]},
   ]
 };}
-function it(name, ll, stay, fix, note, move){
-  return { id:uid(), name, lat:ll?ll[0]:null, lng:ll?ll[1]:null, stay:stay||0, fix:fix||null, note:note||'', move:move||'auto' };
+function it(name, ll, at, note, move){
+  return { id:uid(), name, lat:ll?ll[0]:null, lng:ll?ll[1]:null, at:at||null, note:note||'', move:move||'auto' };
 }
 
 const POIS = [

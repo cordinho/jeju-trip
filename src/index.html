@@ -43,24 +43,10 @@
 <div id="edHome" hidden>
   <div class="edbody" id="edBody">
     <div class="edtitle" id="edTitle">일정</div>
+
+    <label class="f"><span>도착 시간</span>
+      <input class="inp" id="fAt" type="time"></label>
     <div class="edwhen" id="edWhen"></div>
-
-    <div class="switch">
-      <div><b>시각 고정</b><small>항공기·렌터카처럼 시간이 정해진 일정</small></div>
-      <button class="tg" id="fFixOn" aria-pressed="false"></button>
-    </div>
-    <label class="f" id="fixWrap" style="display:none;margin-top:12px"><span>고정 시각</span>
-      <input class="inp" id="fFix" type="time"></label>
-
-    <label class="f"><span>머무는 시간 (분)</span>
-      <input class="inp" id="fStay" type="number" min="0" step="5" value="60"></label>
-    <div class="chips" style="margin:-6px 0 14px">
-      <button class="chip" data-stay="0">0분</button>
-      <button class="chip" data-stay="30">30분</button>
-      <button class="chip" data-stay="60">1시간</button>
-      <button class="chip" data-stay="90">1.5시간</button>
-      <button class="chip" data-stay="120">2시간</button>
-    </div>
 
     <label class="f"><span>장소 · 일정 이름</span>
       <input class="inp" id="fName" placeholder="예: 비자림"></label>
@@ -149,6 +135,7 @@
 <script src="js/06-render.js"></script>
 <script src="js/07-editor.js"></script>
 <script src="js/08-settings.js"></script>
+<script src="js/09-track.js"></script>
 <script src="js/10-main.js"></script>
 </body>
 </html>

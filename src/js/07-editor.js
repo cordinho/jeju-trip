@@ -19,7 +19,7 @@ function closeEdit(){ abortPick(false); editOpen=false; edGoHome(); render(); }
 
 function openEdit(item, keepCoords, insertPos){
   if(!canEdit()) return toast('조회 전용입니다. 편집 링크로 열어주세요');
-  curItem = item || {id:null,name:'',lat:null,lng:null,stay:60,fix:null,note:''};
+  curItem = item || {id:null,name:'',lat:null,lng:null,at:null,note:''};
   const isNew = !item || !item.id;
   // keepCoords는 지도 찍기 후 같은 폼으로 되돌아오는 경우다. 이때는 직전에 정한
   // 삽입 위치(insertAt)를 그대로 유지해야 한다 - 아니면 지도로 위치를 찍는 순간
@@ -27,20 +27,18 @@ function openEdit(item, keepCoords, insertPos){
   if(!keepCoords) insertAt = (isNew && insertPos!=null) ? insertPos : null;
   document.getElementById('edTitle').textContent = isNew?'일정 추가':'일정 편집';
   // keepCoords일 때는 fLat/fLng 말고는 아무 것도 다시 채우지 않는다. 예전엔 지도로
-  // 위치를 찍고 돌아오면 방금 입력해 둔 이름·체류시간까지 curItem 의 초기값으로
+  // 위치를 찍고 돌아오면 방금 입력해 둔 이름·시간까지 curItem 의 초기값으로
   // 덮어써져 사라지는 버그가 있었다 - "지도 찍기 버튼이 불편하다"는 게 사실 이거였다.
   if(!keepCoords){
     document.getElementById('fName').value = curItem.name||'';
     document.getElementById('fLat').value = curItem.lat??'';
     document.getElementById('fLng').value = curItem.lng??'';
-    document.getElementById('fStay').value = curItem.stay??60;
     const mv = curItem.move || 'auto';
     document.querySelectorAll('[data-move]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.move===mv));
     document.getElementById('fNote').value = curItem.note||'';
-    const on = !!curItem.fix;
-    document.getElementById('fFixOn').setAttribute('aria-pressed', on);
-    document.getElementById('fixWrap').style.display = on?'block':'none';
-    document.getElementById('fFix').value = curItem.fix||'';
+    // 시간이 비어 있으면 앞 일정에서 계산한 도착 시각을 미리 넣어준다. 직접 계산해
+    // 타이핑할 필요가 없고, 지우면 다시 자동 계산으로 돌아간다.
+    document.getElementById('fAt').value = curItem.at || minToHHMM(estimatedArrival().min);
     document.getElementById('results').style.display='none';
     document.getElementById('fSearch').value='';
   }
@@ -63,43 +61,40 @@ function scrollBelowPinned(el){
     window.scrollTo({top: window.scrollY + r.top - pinned - 8, behavior:'smooth'});
 }
 
-/* ── 앞 일정에서 계산된 시각 ──
-   목록에는 계산된 시각이 나오지만 편집 폼에는 없어서, 고정 시각을 넣으려면 앞 일정이
-   몇 시에 끝나는지 사용자가 직접 따져야 했다. 폼 위에 그 시각을 보여주고,
-   "시각 고정"을 켤 때 이 값을 미리 채운다. */
-const hhmm = m => {
-  m = ((Math.round(m) % 1440) + 1440) % 1440;   // 자정을 넘겨도 time 입력칸이 받는 형식으로
-  return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
-};
-
-// 이 일정이 앞 일정 기준으로 시작되는 시각(분). 새 일정이면 끼워 넣을 자리의 앞 일정이
-// 끝나는 시각을 쓴다 (좌표가 아직 없어 이동시간은 더하지 못한다).
-function scheduledStart(){
+/* ── 앞 일정에서 계산한 도착 시각 ──
+   앞 일정 도착 시각 + 이동시간. 시간 칸을 미리 채우고, 적어 넣은 시각이 이보다 이르면
+   (= 그 시간엔 못 닿는다) 경고를 띄우는 데 쓴다. */
+function estimatedArrival(){
   const day = S.days[curDay], sc = schedule(day);
+  let idx;
   if(curItem && curItem.id){
-    const r = sc.rows.find(x => x.item.id === curItem.id);
-    if(r) return {min:r.start, late:r.late, exact:true};
+    idx = sc.rows.findIndex(x => x.item.id === curItem.id);
+    if(idx < 0) idx = sc.rows.length;
+  }else{
+    idx = (insertAt==null) ? sc.rows.length : Math.max(0, Math.min(insertAt, sc.rows.length));
   }
-  const idx = (insertAt==null) ? sc.rows.length : Math.max(0, Math.min(insertAt, sc.rows.length));
-  if(idx <= 0) return {min: toMin(day.start) ?? 9*60, late:0, exact:false};
+  if(idx <= 0) return {min: toMin(day.start) ?? 9*60, hasPrev:false};
   const prev = sc.rows[idx-1];
-  return {min: prev ? prev.end : (toMin(day.start) ?? 9*60), late:0, exact:false};
+  return {min: prev.start + ((prev.leg && prev.leg.min) || 0), hasPrev:true, prev:prev.item};
 }
 
 function updateEdWhen(){
   const el = document.getElementById('edWhen');
-  const s = scheduledStart();
-  const fixOn = document.getElementById('fFixOn').getAttribute('aria-pressed')==='true';
-  const fixVal = document.getElementById('fFix').value;
-  if(fixOn && fixVal){
-    el.innerHTML = `<b>${fixVal}</b> 에 고정된 일정입니다` +
-      (s.late ? ` · <span class="warn">앞 일정이 ${dur(s.late)} 늦게 끝납니다</span>` : '');
-  }else if(s.exact){
-    el.innerHTML = `앞 일정 기준 <b>${fmt(s.min)}</b> 시작`;
-  }else{
-    el.innerHTML = `앞 일정이 <b>${fmt(s.min)}</b> 에 끝납니다 <span style="color:var(--mute)">· 이동시간 별도</span>`;
+  const est = estimatedArrival();
+  const v = toMin(document.getElementById('fAt').value);
+  if(!est.hasPrev){
+    el.innerHTML = `이 날의 첫 일정입니다 <span style="color:var(--mute)">· 하루 시작 ${S.days[curDay].start}</span>`;
+    return;
   }
+  const short = (v==null) ? 0 : est.min - v;
+  if(v == null)
+    el.innerHTML = `비우면 앞 일정 기준 <b>${fmt(est.min)}</b> 도착으로 계산됩니다`;
+  else if(short > 5)
+    el.innerHTML = `앞 일정에서 오면 <b>${fmt(est.min)}</b> 도착 · <span class="warn">${dur(short)} 모자랍니다</span>`;
+  else
+    el.innerHTML = `앞 일정에서 오면 <b>${fmt(est.min)}</b> 도착 <span style="color:var(--mute)">· 시간 여유 있음</span>`;
 }
+document.getElementById('fAt').addEventListener('input', updateEdWhen);
 
 // 좌표 입력칸을 없앤 대신(숫자를 직접 볼 필요가 없다), 위치가 있는지·어디인지를
 // 한 줄로 보여주고 지우는 버튼만 남긴다. 검색/지도 찍기로 fLat·fLng 값이 바뀔 때마다 호출한다.
@@ -116,19 +111,6 @@ document.getElementById('btnLocClear').onclick=()=>{
   updateLocStat();
 };
 
-document.getElementById('fFixOn').onclick=e=>{
-  const on = e.currentTarget.getAttribute('aria-pressed')!=='true';
-  e.currentTarget.setAttribute('aria-pressed', on);
-  document.getElementById('fixWrap').style.display = on?'block':'none';
-  // 켤 때 비어 있으면 앞 일정에서 계산된 시각을 넣어준다. 직접 계산해 타이핑할 필요가 없다.
-  const f = document.getElementById('fFix');
-  if(on && !f.value) f.value = hhmm(scheduledStart().min);
-  updateEdWhen();
-};
-document.getElementById('fFix').onchange=updateEdWhen;
-document.querySelectorAll('[data-stay]').forEach(b=>b.onclick=()=>{
-  document.getElementById('fStay').value=b.dataset.stay;
-});
 document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('[data-move]').forEach(x=>x.setAttribute('aria-pressed', x===b));
 });
@@ -139,12 +121,10 @@ document.getElementById('btnSave').onclick=()=>{
   if(!name) return toast('이름을 입력하세요');
   const lat=parseFloat(document.getElementById('fLat').value);
   const lng=parseFloat(document.getElementById('fLng').value);
-  const fixOn=document.getElementById('fFixOn').getAttribute('aria-pressed')==='true';
   const o={
     id: curItem.id||uid(), name,
     lat: isFinite(lat)?lat:null, lng: isFinite(lng)?lng:null,
-    stay: Math.max(0, parseInt(document.getElementById('fStay').value)||0),
-    fix: fixOn ? (document.getElementById('fFix').value||null) : null,
+    at: document.getElementById('fAt').value || null,
     move: (document.querySelector('[data-move][aria-pressed="true"]')||{dataset:{move:'auto'}}).dataset.move,
     note: document.getElementById('fNote').value.trim()
   };

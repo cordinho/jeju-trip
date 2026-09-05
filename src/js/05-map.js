@@ -109,10 +109,23 @@ function markPickSaved(saved){
 
 pickCtl.addTo(leafletMap);   // 우측 버튼 묶음의 맨 아래에 오도록 마지막에 붙인다
 
+/* ---- 이동 기록 버튼 (09-track.js) ---- */
+const trackCtl = L.control({ position: 'topleft' });
+trackCtl.onAdd = () => {
+  const d = L.DomUtil.create('div', 'maptrack');
+  d.innerHTML = '<button type="button" id="trackBtn" aria-pressed="false">이동 기록</button>'
+              + '<button type="button" id="trackDel" hidden>지우기</button>';
+  L.DomEvent.disableClickPropagation(d);
+  d.querySelector('#trackBtn').onclick = e => { e.preventDefault(); toggleTrack(); };
+  d.querySelector('#trackDel').onclick = e => { e.preventDefault(); clearTrack(); };
+  return d;
+};
+trackCtl.addTo(leafletMap);
+
 const MAP = (function(){
   let clickCb = null;
   const lines = [], markers = [];
-  let lastBounds = null, allPts = null, pickMk = null;
+  let lastBounds = null, allPts = null, pickMk = null, trackLine = null;
 
   leafletMap.on('click', e => { clickCb && clickCb({ lat: e.latlng.lat, lng: e.latlng.lng }); });
 
@@ -170,7 +183,17 @@ const MAP = (function(){
         interactive: false, zIndexOffset: 1000
       }).addTo(leafletMap);
     },
-    clearPickMarker(){ if(pickMk){ pickMk.remove(); pickMk=null; } }
+    clearPickMarker(){ if(pickMk){ pickMk.remove(); pickMk=null; } },
+
+    // 실제로 다닌 경로(09-track.js). 계획 동선과 달리 clear() 로 지워지지 않게 따로 둔다 -
+    // 기록 중에는 점이 들어올 때마다 갱신되는데 매번 전체를 다시 그릴 이유가 없다.
+    setTrack(pts){
+      if(!pts || pts.length < 2){ if(trackLine){ trackLine.remove(); trackLine=null; } return; }
+      const ll = pts.map(p=>[p[0],p[1]]);
+      if(trackLine) trackLine.setLatLngs(ll);
+      else trackLine = L.polyline(ll, {color:'#6B4FBB', weight:5, opacity:.85,
+        lineCap:'round', lineJoin:'round'}).addTo(leafletMap);
+    }
   };
   return api;
 })();
@@ -222,6 +245,9 @@ function drawMap(sc, fit){
       ()=>{ curItem = g.rows[0].item; render(false); },
       g.rows.map(r=>r.item.name).join(' / '));
   });
+
+  MAP.setTrack(S.days[curDay].track);   // 실제로 다닌 경로를 계획 위에 겹쳐 그린다
+  renderTrackBar();
 
   const all = rows.map(x=>[x.r.item.lat, x.r.item.lng]);
   MAP.setAll(all);

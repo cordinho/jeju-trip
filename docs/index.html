@@ -744,6 +744,19 @@ body.picking .mm-mk{pointer-events:none}
 .pin.pick{background:var(--tangerine);width:28px;height:28px;font-size:15px;
   box-shadow:0 0 0 4px rgba(238,108,18,.25),0 1px 4px rgba(0,0,0,.35)}
 
+/* 이동 기록 버튼 (지도 좌측 위) */
+.maptrack{display:flex;gap:5px}
+.maptrack button{padding:7px 11px;border-radius:999px;border:1px solid var(--line);
+  background:rgba(255,255,255,.95);font-size:12px;font-weight:700;color:var(--ink-2);
+  box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap}
+.maptrack button[aria-pressed="true"]{background:#6B4FBB;border-color:#6B4FBB;color:#fff}
+/* 기록 중임을 한눈에 - 버튼이 천천히 깜빡인다 */
+@keyframes trackpulse{50%{opacity:.55}}
+body.tracking .maptrack button[aria-pressed="true"]{animation:trackpulse 1.6s ease-in-out infinite}
+#trackDel{color:var(--lava)}
+/* 위치를 고르는 중에는 숨겨서 지도 조작을 방해하지 않는다 */
+body.picking .maptrack{display:none}
+
 /* 지도 우측 "위치 저장" 버튼 - 위치를 고르는 동안에만 보인다 */
 .mappicksave{display:none}
 body.picking .mappicksave{display:block}
@@ -768,6 +781,9 @@ body.editing .fab{display:none}
 .sum::-webkit-scrollbar{display:none}
 .sum b{font-weight:700;color:var(--ink)}
 .sum .warn{color:var(--lava);font-weight:700}
+.sum .trk{color:#6B4FBB}
+.sum .trk b{color:#6B4FBB}
+.sum .trk:empty{display:none}
 
 /* ---------- list ---------- */
 main{padding:10px 12px 8px}
@@ -799,7 +815,6 @@ main{padding:10px 12px 8px}
 .meta{font-size:12px;color:var(--mute);margin-top:2px;word-break:break-all}
 .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
 .tag{font-size:11px;padding:2px 7px;border-radius:6px;background:var(--bg);color:var(--ink-2)}
-.tag.fix{background:#FDEAD9;color:#8F3D06}
 .tag.nogeo{background:#F6E2DE;color:var(--lava)}
 .tag.late{background:var(--lava);color:#fff}
 .ctrl{display:flex;flex-direction:column;gap:3px;flex:none}
@@ -917,24 +932,10 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
 <div id="edHome" hidden>
   <div class="edbody" id="edBody">
     <div class="edtitle" id="edTitle">일정</div>
+
+    <label class="f"><span>도착 시간</span>
+      <input class="inp" id="fAt" type="time"></label>
     <div class="edwhen" id="edWhen"></div>
-
-    <div class="switch">
-      <div><b>시각 고정</b><small>항공기·렌터카처럼 시간이 정해진 일정</small></div>
-      <button class="tg" id="fFixOn" aria-pressed="false"></button>
-    </div>
-    <label class="f" id="fixWrap" style="display:none;margin-top:12px"><span>고정 시각</span>
-      <input class="inp" id="fFix" type="time"></label>
-
-    <label class="f"><span>머무는 시간 (분)</span>
-      <input class="inp" id="fStay" type="number" min="0" step="5" value="60"></label>
-    <div class="chips" style="margin:-6px 0 14px">
-      <button class="chip" data-stay="0">0분</button>
-      <button class="chip" data-stay="30">30분</button>
-      <button class="chip" data-stay="60">1시간</button>
-      <button class="chip" data-stay="90">1.5시간</button>
-      <button class="chip" data-stay="120">2시간</button>
-    </div>
 
     <label class="f"><span>장소 · 일정 이름</span>
       <input class="inp" id="fName" placeholder="예: 비자림"></label>
@@ -1081,40 +1082,40 @@ const SEHWA = [33.5245, 126.8577];     // 세화민속오일시장
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-// ver 2: 실제 도로 경로(OSRM)를 기본으로 켠다. 02-state.js 의 migrate() 가 ver 1 로
-// 저장돼 있던 기존 데이터도 한 번 올려준다.
+// ver 3: 일정마다 시간은 "도착 시각(at)" 하나뿐이다. 고정시각(fix)·체류시간(stay)은 없앴다.
+// 02-state.js 의 migrate() 가 예전 형식으로 저장돼 있던 데이터도 한 번 올려준다.
 function seed(){ return {
-  ver: 2,
+  ver: 3,
   cfg: { walkKm:1, walkSp:4.5, driveSp:40, detour:1.35, buffer:5, osrm:true },
   days: [
     { id:'d1', label:'10/29', dow:'목', start:'14:50', items:[
-      it('집 출발', null, 0, '14:50', '', 'none'),
-      it('김포공항', AIRPORT_GIMPO, 40, '16:00', '수하물·탑승 준비'),
-      it('이스타항공 출발', AIRPORT_GIMPO, 0, '16:40', '예약번호 ZZUQQE', 'air'),
-      it('제주공항 도착 · 엄빠 만나기', AIRPORT_JEJU, 30, '18:00', '렌터카 영업소까지 셔틀', 'drive'),
-      it('롯데렌터카 인수', LOTTE_JEJU, 30, '18:30', '셀토스 26-22-587705', 'drive'),
-      it('저녁식사', null, 60, null, '장소 미정'),
-      it('숙소 도착 (하도39)', STAY, 0, null, '제주시 구좌읍 면수2길 39'),
+      it('집 출발', null, '14:50', '', 'none'),
+      it('김포공항', AIRPORT_GIMPO, '16:00', '수하물·탑승 준비'),
+      it('이스타항공 출발', AIRPORT_GIMPO, '16:40', '예약번호 ZZUQQE', 'air'),
+      it('제주공항 도착 · 엄빠 만나기', AIRPORT_JEJU, '18:00', '렌터카 영업소까지 셔틀', 'drive'),
+      it('롯데렌터카 인수', LOTTE_JEJU, '18:30', '셀토스 26-22-587705', 'drive'),
+      it('저녁식사', null, '19:00', '장소 미정'),
+      it('숙소 도착 (하도39)', STAY, '20:00', '제주시 구좌읍 면수2길 39'),
     ]},
     { id:'d2', label:'10/30', dow:'금', start:'09:00', items:[
-      it('아침식사 · 모다정', [33.5250,126.8571], 60, '09:00', '모다정 8시 오픈 / 재연식당 10시 오픈'),
-      it('세화민속오일시장 산책', SEHWA, 90, '10:00', '오일장에서 먹어도 됨'),
+      it('아침식사 · 모다정', [33.5250,126.8571], '09:00', '모다정 8시 오픈 / 재연식당 10시 오픈'),
+      it('세화민속오일시장 산책', SEHWA, '10:00', '오일장에서 먹어도 됨'),
     ]},
     { id:'d3', label:'10/31', dow:'토', start:'09:15', items:[
-      it('언니네 제주 도착', AIRPORT_JEJU, 15, '09:15', '', 'drive'),
-      it('롯데렌터카 인수', LOTTE_JEJU, 30, '09:30', '셀토스 26-22-587792'),
-      it('숙소 합류 · 휴식', STAY, 120, '10:30'),
+      it('언니네 제주 도착', AIRPORT_JEJU, '09:15', '', 'drive'),
+      it('롯데렌터카 인수', LOTTE_JEJU, '09:30', '셀토스 26-22-587792'),
+      it('숙소 합류 · 휴식', STAY, '10:30'),
     ]},
     { id:'d4', label:'11/01', dow:'일', start:'11:00', items:[
-      it('숙소 체크아웃', STAY, 0, null),
-      it('렌터카 반납', LOTTE_JEJU, 30, '14:30'),
-      it('엄빠 여수행 아시아나 출발', AIRPORT_JEJU, 0, '15:35', '예약번호 ERNE2B'),
-      it('에어서울 출발', AIRPORT_JEJU, 0, '16:05', '예약번호 MAAVDV'),
+      it('숙소 체크아웃', STAY, '11:00'),
+      it('렌터카 반납', LOTTE_JEJU, '14:30'),
+      it('엄빠 여수행 아시아나 출발', AIRPORT_JEJU, '15:35', '예약번호 ERNE2B'),
+      it('에어서울 출발', AIRPORT_JEJU, '16:05', '예약번호 MAAVDV'),
     ]},
   ]
 };}
-function it(name, ll, stay, fix, note, move){
-  return { id:uid(), name, lat:ll?ll[0]:null, lng:ll?ll[1]:null, stay:stay||0, fix:fix||null, note:note||'', move:move||'auto' };
+function it(name, ll, at, note, move){
+  return { id:uid(), name, lat:ll?ll[0]:null, lng:ll?ll[1]:null, at:at||null, note:note||'', move:move||'auto' };
 }
 
 const POIS = [
@@ -1160,19 +1161,57 @@ async function load(){
   try{
     if(!window.storage) return;
     const r = await window.storage.get(KEY);
-    if(r && r.value){ const p = JSON.parse(r.value); if(p && p.days) S = migrate(p); }
+    // migrate() 안에서 leg() 가 S.cfg 를 읽으므로 먼저 S 에 넣고 제자리에서 올린다.
+    if(r && r.value){ const p = JSON.parse(r.value); if(p && p.days){ S = p; migrate(); } }
   }catch(e){ /* 최초 실행 */ }
 }
 
-// 저장해 둔 데이터를 최신 형식으로 올린다. 설정 기본값을 바꿔도 이미 저장된 사람에게는
+// 저장해 둔 데이터를 최신 형식으로 올린다. 기본값이나 형식을 바꿔도 이미 저장된 사람에게는
 // 반영되지 않으므로(그래서 "바뀐 게 없다"로 보인다) 여기서 한 번 올려준다.
-function migrate(p){
-  p.cfg = p.cfg || {};
-  if(!(p.ver >= 2)){
-    p.cfg.osrm = true;   // 실제 도로 경로를 기본으로
-    p.ver = 2;
+function migrate(){
+  S.cfg = S.cfg || {};
+  if(!(S.ver >= 2)){
+    S.cfg.osrm = true;   // 실제 도로 경로를 기본으로
+    S.ver = 2;
   }
-  return p;
+  if(!(S.ver >= 3)){
+    // 고정시각(fix)+체류시간(stay) → 도착시각(at) 하나로. 그냥 fix 만 옮기면 체류시간으로
+    // 밀려 있던 뒷 일정들의 시각이 통째로 당겨져 버린다. 옛 규칙 그대로 한 번 계산해서
+    // 지금 화면에 보이던 시각을 그대로 굳힌다.
+    S.days.forEach(day=>{
+      legacyStarts(day).forEach((min, i)=>{ day.items[i].at = minToHHMM(min); });
+      day.items.forEach(item=>{ delete item.fix; delete item.stay; });
+    });
+    S.ver = 3;
+  }
+}
+
+const minToHHMM = m => {
+  m = ((Math.round(m) % 1440) + 1440) % 1440;
+  return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+};
+
+// ver 2 이하의 스케줄 규칙(고정시각 + 체류시간 + 이동시간)을 그대로 재현한다.
+// 이전 목적으로만 쓴다 - 03-schedule.js 의 schedule() 은 이미 새 규칙으로 바뀌었다.
+function legacyStarts(day){
+  let cur = toMin(day.start) ?? 9*60;
+  const out = [];
+  day.items.forEach((item, idx)=>{
+    let start = cur;
+    if(item.fix != null) start = toMin(item.fix);
+    const end = start + (item.stay || 0);
+    let min = 0;
+    const nx = day.items[idx+1];
+    if(nx){
+      const A = item.lat!=null ? [item.lat,item.lng] : null;
+      const B = nx.lat!=null ? [nx.lat,nx.lng] : null;
+      const lg = leg(A, B, item.move);
+      min = lg.min || 0;
+    }
+    cur = end + min;
+    out.push(start);
+  });
+  return out;
 }
 
 
@@ -1248,17 +1287,22 @@ async function fetchOsrm(){
 }
 
 /* ══════════════ 스케줄 계산 ══════════════ */
+// 일정마다 시간은 하나뿐이다: item.at = 그 장소에 "도착"하는 시각.
+// 비워두면 앞 일정 도착 시각 + 이동시간으로 계산한다(rows[].auto).
+// 적어 둔 도착 시각이 그렇게 계산한 시각보다 이르면 그만큼 "부족"으로 경고한다 -
+// 앞 일정에서 출발해 제때 닿을 수 없다는 뜻이고, 이게 이 앱의 핵심 가치다.
 function schedule(day){
-  let cur = toMin(day.start) ?? 9*60;
+  let cur = toMin(day.start) ?? 9*60;   // 앞 일정에서 이어질 때 가장 이른 도착 가능 시각
   const out=[]; let totKm=0, totMove=0, lateN=0, airKm=0;
   day.items.forEach((item,idx)=>{
-    let start=cur, late=0;
-    if(item.fix!=null){
-      const f=toMin(item.fix);
-      if(cur > f + 5){ late = cur - f; lateN++; }
-      start = f;
+    const at = toMin(item.at);
+    let start, late=0;
+    if(at!=null){
+      start = at;
+      if(idx > 0 && cur > at + 5){ late = cur - at; lateN++; }
+    }else{
+      start = cur;
     }
-    const end = start + (item.stay||0);
     let lg={mode:'none'};
     const nx = day.items[idx+1];
     if(nx){
@@ -1268,10 +1312,11 @@ function schedule(day){
       if(lg.km && !lg.skip){ totKm+=lg.km; totMove+=lg.min; }
       if(lg.skip && lg.km) airKm += lg.km;
     }
-    cur = end + (lg.min||0);
-    out.push({item, start, end, late, leg:lg});
+    cur = start + (lg.min||0);
+    out.push({item, start, late, leg:lg, auto: at==null});
   });
-  return {rows:out, endAt:cur, totKm, totMove, lateN, airKm};
+  return {rows:out, endAt: out.length ? out[out.length-1].start : cur,
+          totKm, totMove, lateN, airKm};
 }
 
 
@@ -1387,10 +1432,23 @@ function markPickSaved(saved){
 
 pickCtl.addTo(leafletMap);   // 우측 버튼 묶음의 맨 아래에 오도록 마지막에 붙인다
 
+/* ---- 이동 기록 버튼 (09-track.js) ---- */
+const trackCtl = L.control({ position: 'topleft' });
+trackCtl.onAdd = () => {
+  const d = L.DomUtil.create('div', 'maptrack');
+  d.innerHTML = '<button type="button" id="trackBtn" aria-pressed="false">이동 기록</button>'
+              + '<button type="button" id="trackDel" hidden>지우기</button>';
+  L.DomEvent.disableClickPropagation(d);
+  d.querySelector('#trackBtn').onclick = e => { e.preventDefault(); toggleTrack(); };
+  d.querySelector('#trackDel').onclick = e => { e.preventDefault(); clearTrack(); };
+  return d;
+};
+trackCtl.addTo(leafletMap);
+
 const MAP = (function(){
   let clickCb = null;
   const lines = [], markers = [];
-  let lastBounds = null, allPts = null, pickMk = null;
+  let lastBounds = null, allPts = null, pickMk = null, trackLine = null;
 
   leafletMap.on('click', e => { clickCb && clickCb({ lat: e.latlng.lat, lng: e.latlng.lng }); });
 
@@ -1448,7 +1506,17 @@ const MAP = (function(){
         interactive: false, zIndexOffset: 1000
       }).addTo(leafletMap);
     },
-    clearPickMarker(){ if(pickMk){ pickMk.remove(); pickMk=null; } }
+    clearPickMarker(){ if(pickMk){ pickMk.remove(); pickMk=null; } },
+
+    // 실제로 다닌 경로(09-track.js). 계획 동선과 달리 clear() 로 지워지지 않게 따로 둔다 -
+    // 기록 중에는 점이 들어올 때마다 갱신되는데 매번 전체를 다시 그릴 이유가 없다.
+    setTrack(pts){
+      if(!pts || pts.length < 2){ if(trackLine){ trackLine.remove(); trackLine=null; } return; }
+      const ll = pts.map(p=>[p[0],p[1]]);
+      if(trackLine) trackLine.setLatLngs(ll);
+      else trackLine = L.polyline(ll, {color:'#6B4FBB', weight:5, opacity:.85,
+        lineCap:'round', lineJoin:'round'}).addTo(leafletMap);
+    }
   };
   return api;
 })();
@@ -1500,6 +1568,9 @@ function drawMap(sc, fit){
       ()=>{ curItem = g.rows[0].item; render(false); },
       g.rows.map(r=>r.item.name).join(' / '));
   });
+
+  MAP.setTrack(S.days[curDay].track);   // 실제로 다닌 경로를 계획 위에 겹쳐 그린다
+  renderTrackBar();
 
   const all = rows.map(x=>[x.r.item.lat, x.r.item.lng]);
   MAP.setAll(all);
@@ -1553,8 +1624,10 @@ function render_(fit){
     `<span>육상 <b>${sc.totKm?sc.totKm.toFixed(1):0}km</b></span>` +
     (sc.airKm?`<span>항공 <b>${Math.round(sc.airKm)}km</b></span>`:'') +
     `<span>이동시간 <b>${dur(sc.totMove)}</b></span>` +
-    `<span>종료 <b>${fmt(sc.endAt)}</b></span>` +
-    (sc.lateN?`<span class="warn">고정시각 충돌 ${sc.lateN}건</span>`:`<span style="color:var(--ok)">시간 여유 있음</span>`);
+    `<span>마지막 <b>${fmt(sc.endAt)}</b></span>` +
+    // 기록 거리는 기록 중에도 계속 바뀌므로 renderTrackBar() 가 채운다 (09-track.js)
+    `<span class="trk" id="sumTrack"></span>` +
+    (sc.lateN?`<span class="warn">시간 부족 ${sc.lateN}건</span>`:`<span style="color:var(--ok)">시간 여유 있음</span>`);
 
   // 리스트
   const L1=document.getElementById('list'); L1.innerHTML='';
@@ -1591,12 +1664,11 @@ function render_(fit){
     const c=document.createElement('div');
     c.className='card'+(curItem&&curItem.id===r.item.id?' sel':'');
     const tags=[];
-    if(r.item.fix) tags.push(`<span class="tag fix">${r.item.fix} 고정</span>`);
-    if(r.item.stay) tags.push(`<span class="tag">${dur(r.item.stay)} 체류</span>`);
+    if(r.auto) tags.push(`<span class="tag">시간 자동 계산</span>`);
     if(r.item.lat==null) tags.push(`<span class="tag nogeo">위치 없음</span>`);
-    if(r.late) tags.push(`<span class="tag late">${dur(r.late)} 지각</span>`);
+    if(r.late) tags.push(`<span class="tag late">${dur(r.late)} 모자람</span>`);
     c.innerHTML=`
-      <div class="time"><div class="t">${fmt(r.start)}</div>${r.item.stay?`<div class="e">→ ${fmt(r.end)}</div>`:''}</div>
+      <div class="time"><div class="t">${fmt(r.start)}</div></div>
       <div class="body">
         <div class="name">${i+1}. ${esc(r.item.name)}</div>
         ${r.item.note?`<div class="meta">${esc(r.item.note)}</div>`:''}
@@ -1677,7 +1749,7 @@ function closeEdit(){ abortPick(false); editOpen=false; edGoHome(); render(); }
 
 function openEdit(item, keepCoords, insertPos){
   if(!canEdit()) return toast('조회 전용입니다. 편집 링크로 열어주세요');
-  curItem = item || {id:null,name:'',lat:null,lng:null,stay:60,fix:null,note:''};
+  curItem = item || {id:null,name:'',lat:null,lng:null,at:null,note:''};
   const isNew = !item || !item.id;
   // keepCoords는 지도 찍기 후 같은 폼으로 되돌아오는 경우다. 이때는 직전에 정한
   // 삽입 위치(insertAt)를 그대로 유지해야 한다 - 아니면 지도로 위치를 찍는 순간
@@ -1685,20 +1757,18 @@ function openEdit(item, keepCoords, insertPos){
   if(!keepCoords) insertAt = (isNew && insertPos!=null) ? insertPos : null;
   document.getElementById('edTitle').textContent = isNew?'일정 추가':'일정 편집';
   // keepCoords일 때는 fLat/fLng 말고는 아무 것도 다시 채우지 않는다. 예전엔 지도로
-  // 위치를 찍고 돌아오면 방금 입력해 둔 이름·체류시간까지 curItem 의 초기값으로
+  // 위치를 찍고 돌아오면 방금 입력해 둔 이름·시간까지 curItem 의 초기값으로
   // 덮어써져 사라지는 버그가 있었다 - "지도 찍기 버튼이 불편하다"는 게 사실 이거였다.
   if(!keepCoords){
     document.getElementById('fName').value = curItem.name||'';
     document.getElementById('fLat').value = curItem.lat??'';
     document.getElementById('fLng').value = curItem.lng??'';
-    document.getElementById('fStay').value = curItem.stay??60;
     const mv = curItem.move || 'auto';
     document.querySelectorAll('[data-move]').forEach(b=>b.setAttribute('aria-pressed', b.dataset.move===mv));
     document.getElementById('fNote').value = curItem.note||'';
-    const on = !!curItem.fix;
-    document.getElementById('fFixOn').setAttribute('aria-pressed', on);
-    document.getElementById('fixWrap').style.display = on?'block':'none';
-    document.getElementById('fFix').value = curItem.fix||'';
+    // 시간이 비어 있으면 앞 일정에서 계산한 도착 시각을 미리 넣어준다. 직접 계산해
+    // 타이핑할 필요가 없고, 지우면 다시 자동 계산으로 돌아간다.
+    document.getElementById('fAt').value = curItem.at || minToHHMM(estimatedArrival().min);
     document.getElementById('results').style.display='none';
     document.getElementById('fSearch').value='';
   }
@@ -1721,43 +1791,40 @@ function scrollBelowPinned(el){
     window.scrollTo({top: window.scrollY + r.top - pinned - 8, behavior:'smooth'});
 }
 
-/* ── 앞 일정에서 계산된 시각 ──
-   목록에는 계산된 시각이 나오지만 편집 폼에는 없어서, 고정 시각을 넣으려면 앞 일정이
-   몇 시에 끝나는지 사용자가 직접 따져야 했다. 폼 위에 그 시각을 보여주고,
-   "시각 고정"을 켤 때 이 값을 미리 채운다. */
-const hhmm = m => {
-  m = ((Math.round(m) % 1440) + 1440) % 1440;   // 자정을 넘겨도 time 입력칸이 받는 형식으로
-  return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
-};
-
-// 이 일정이 앞 일정 기준으로 시작되는 시각(분). 새 일정이면 끼워 넣을 자리의 앞 일정이
-// 끝나는 시각을 쓴다 (좌표가 아직 없어 이동시간은 더하지 못한다).
-function scheduledStart(){
+/* ── 앞 일정에서 계산한 도착 시각 ──
+   앞 일정 도착 시각 + 이동시간. 시간 칸을 미리 채우고, 적어 넣은 시각이 이보다 이르면
+   (= 그 시간엔 못 닿는다) 경고를 띄우는 데 쓴다. */
+function estimatedArrival(){
   const day = S.days[curDay], sc = schedule(day);
+  let idx;
   if(curItem && curItem.id){
-    const r = sc.rows.find(x => x.item.id === curItem.id);
-    if(r) return {min:r.start, late:r.late, exact:true};
+    idx = sc.rows.findIndex(x => x.item.id === curItem.id);
+    if(idx < 0) idx = sc.rows.length;
+  }else{
+    idx = (insertAt==null) ? sc.rows.length : Math.max(0, Math.min(insertAt, sc.rows.length));
   }
-  const idx = (insertAt==null) ? sc.rows.length : Math.max(0, Math.min(insertAt, sc.rows.length));
-  if(idx <= 0) return {min: toMin(day.start) ?? 9*60, late:0, exact:false};
+  if(idx <= 0) return {min: toMin(day.start) ?? 9*60, hasPrev:false};
   const prev = sc.rows[idx-1];
-  return {min: prev ? prev.end : (toMin(day.start) ?? 9*60), late:0, exact:false};
+  return {min: prev.start + ((prev.leg && prev.leg.min) || 0), hasPrev:true, prev:prev.item};
 }
 
 function updateEdWhen(){
   const el = document.getElementById('edWhen');
-  const s = scheduledStart();
-  const fixOn = document.getElementById('fFixOn').getAttribute('aria-pressed')==='true';
-  const fixVal = document.getElementById('fFix').value;
-  if(fixOn && fixVal){
-    el.innerHTML = `<b>${fixVal}</b> 에 고정된 일정입니다` +
-      (s.late ? ` · <span class="warn">앞 일정이 ${dur(s.late)} 늦게 끝납니다</span>` : '');
-  }else if(s.exact){
-    el.innerHTML = `앞 일정 기준 <b>${fmt(s.min)}</b> 시작`;
-  }else{
-    el.innerHTML = `앞 일정이 <b>${fmt(s.min)}</b> 에 끝납니다 <span style="color:var(--mute)">· 이동시간 별도</span>`;
+  const est = estimatedArrival();
+  const v = toMin(document.getElementById('fAt').value);
+  if(!est.hasPrev){
+    el.innerHTML = `이 날의 첫 일정입니다 <span style="color:var(--mute)">· 하루 시작 ${S.days[curDay].start}</span>`;
+    return;
   }
+  const short = (v==null) ? 0 : est.min - v;
+  if(v == null)
+    el.innerHTML = `비우면 앞 일정 기준 <b>${fmt(est.min)}</b> 도착으로 계산됩니다`;
+  else if(short > 5)
+    el.innerHTML = `앞 일정에서 오면 <b>${fmt(est.min)}</b> 도착 · <span class="warn">${dur(short)} 모자랍니다</span>`;
+  else
+    el.innerHTML = `앞 일정에서 오면 <b>${fmt(est.min)}</b> 도착 <span style="color:var(--mute)">· 시간 여유 있음</span>`;
 }
+document.getElementById('fAt').addEventListener('input', updateEdWhen);
 
 // 좌표 입력칸을 없앤 대신(숫자를 직접 볼 필요가 없다), 위치가 있는지·어디인지를
 // 한 줄로 보여주고 지우는 버튼만 남긴다. 검색/지도 찍기로 fLat·fLng 값이 바뀔 때마다 호출한다.
@@ -1774,19 +1841,6 @@ document.getElementById('btnLocClear').onclick=()=>{
   updateLocStat();
 };
 
-document.getElementById('fFixOn').onclick=e=>{
-  const on = e.currentTarget.getAttribute('aria-pressed')!=='true';
-  e.currentTarget.setAttribute('aria-pressed', on);
-  document.getElementById('fixWrap').style.display = on?'block':'none';
-  // 켤 때 비어 있으면 앞 일정에서 계산된 시각을 넣어준다. 직접 계산해 타이핑할 필요가 없다.
-  const f = document.getElementById('fFix');
-  if(on && !f.value) f.value = hhmm(scheduledStart().min);
-  updateEdWhen();
-};
-document.getElementById('fFix').onchange=updateEdWhen;
-document.querySelectorAll('[data-stay]').forEach(b=>b.onclick=()=>{
-  document.getElementById('fStay').value=b.dataset.stay;
-});
 document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('[data-move]').forEach(x=>x.setAttribute('aria-pressed', x===b));
 });
@@ -1797,12 +1851,10 @@ document.getElementById('btnSave').onclick=()=>{
   if(!name) return toast('이름을 입력하세요');
   const lat=parseFloat(document.getElementById('fLat').value);
   const lng=parseFloat(document.getElementById('fLng').value);
-  const fixOn=document.getElementById('fFixOn').getAttribute('aria-pressed')==='true';
   const o={
     id: curItem.id||uid(), name,
     lat: isFinite(lat)?lat:null, lng: isFinite(lng)?lng:null,
-    stay: Math.max(0, parseInt(document.getElementById('fStay').value)||0),
-    fix: fixOn ? (document.getElementById('fFix').value||null) : null,
+    at: document.getElementById('fAt').value || null,
     move: (document.querySelector('[data-move][aria-pressed="true"]')||{dataset:{move:'auto'}}).dataset.move,
     note: document.getElementById('fNote').value.trim()
   };
@@ -1970,7 +2022,7 @@ document.getElementById('btnPoi').onclick=()=>{
     b.className='poi';
     b.innerHTML=`${esc(p[0])}<small>${esc(p[3])}</small>`;
     b.onclick=()=>{
-      S.days[curDay].items.push(it(p[0],[p[1],p[2]],90,null,p[3]));
+      S.days[curDay].items.push(it(p[0],[p[1],p[2]],null,p[3]));
       save(); closeSheets(); render(true); refreshOsrm(); toast(`${p[0]} 추가`);
     };
     el.appendChild(b);
@@ -2019,6 +2071,121 @@ document.getElementById('btnReset').onclick=()=>{
 
 document.getElementById('btnAdd').onclick=()=>openEdit(null);
 document.getElementById('btnAddTop').onclick=()=>openEdit(null);
+
+
+/* ─────────── 09-track.js ─────────── */
+/* 브라우저가 순서대로 로드하는 일반 스크립트입니다.
+   ES 모듈이 아니므로 import/export를 쓰지 마세요 - file:// 에서도 열려야 합니다.
+   최상위 const/let/function 은 스크립트 간에 공유됩니다. 순서는 index.html 이 결정합니다. */
+
+/* ══════════════ 이동 경로 기록 ══════════════ */
+// 여행 당일에 실제로 다닌 길을 GPS 로 남긴다. 계획 동선(주황/청록)과 구분되게 보라색으로
+// 지도에 겹쳐 그린다. 날짜별로 day.track = [[lat, lng, 초단위시각], ...] 에 쌓는다.
+//
+// 한계를 알고 쓸 것: 브라우저는 화면이 켜져 있고 이 페이지가 떠 있을 때만 위치를 준다.
+// 화면을 끄거나 다른 앱으로 가면 기록이 끊긴다 (백그라운드 추적은 웹으로 불가능하다).
+// 또 위치 권한은 HTTPS 에서만 나온다 - 배포본(GitHub Pages)은 되고, 로컬 개발 서버를
+// 폰에서 IP 로 열면 안 된다.
+
+const TRACK_MIN_M = 25;      // 이보다 덜 움직였으면 점을 더하지 않는다 (제자리 흔들림 제거)
+const TRACK_MAX_ACC = 100;   // 오차가 이보다 큰 측정값은 버린다 (m)
+
+let trackWatch = null;
+let trackSaveT = null;
+
+const tracking = () => trackWatch !== null;
+const dayTrack = () => S.days[curDay].track || [];
+
+// 기록 중에는 점이 자주 들어오므로 저장을 몰아서 한다 (매 점마다 쓰면 낭비다).
+function trackSaveSoon(){
+  clearTimeout(trackSaveT);
+  trackSaveT = setTimeout(()=>save(), 8000);
+}
+
+function trackDistKm(pts){
+  let km = 0;
+  for(let i=1;i<pts.length;i++) km += hav([pts[i-1][0],pts[i-1][1]], [pts[i][0],pts[i][1]]);
+  return km;
+}
+
+function onTrackPos(p){
+  const c = p.coords;
+  if(c.accuracy != null && c.accuracy > TRACK_MAX_ACC) return;
+  const day = S.days[curDay];
+  const t = day.track || (day.track = []);
+  const last = t[t.length-1];
+  if(last && hav([last[0],last[1]], [c.latitude,c.longitude])*1000 < TRACK_MIN_M) return;
+  t.push([+c.latitude.toFixed(5), +c.longitude.toFixed(5), Math.round(Date.now()/1000)]);
+  MAP.setTrack(t);
+  renderTrackBar();
+  trackSaveSoon();
+}
+
+// 감시 중에는 신호가 잠깐 끊길 때마다 오류가 섞여 들어온다(터널·중산간 음영지역).
+// 여기서 멈춰버리면 그 순간 기록이 통째로 끝나므로, 권한 거부(code 1)일 때만 중단하고
+// 나머지는 감시를 유지한다 - watchPosition 은 오류 뒤에도 계속 살아 있다.
+let trackErrToastAt = 0;
+function onTrackErr(e){
+  if(e && e.code === 1){
+    stopTrack();
+    toast('위치 권한이 필요합니다');
+    return;
+  }
+  const now = Date.now();
+  if(now - trackErrToastAt > 60000){   // 잔소리하지 않도록 1분에 한 번만 알린다
+    trackErrToastAt = now;
+    toast('위치 신호가 약합니다 · 계속 기다립니다');
+  }
+}
+
+function startTrack(){
+  if(!navigator.geolocation) return toast('이 브라우저는 위치 기록을 지원하지 않습니다');
+  const day = S.days[curDay];
+  day.track = day.track || [];
+  trackWatch = navigator.geolocation.watchPosition(onTrackPos, onTrackErr,
+    { enableHighAccuracy:true, maximumAge:5000, timeout:20000 });
+  document.body.classList.add('tracking');
+  renderTrackBar();
+  toast('이동 기록을 시작합니다 · 화면이 꺼지면 멈춥니다');
+}
+
+function stopTrack(){
+  if(trackWatch !== null) navigator.geolocation.clearWatch(trackWatch);
+  trackWatch = null;
+  document.body.classList.remove('tracking');
+  clearTimeout(trackSaveT);
+  save();
+  renderTrackBar();
+}
+
+function toggleTrack(){ tracking() ? stopTrack() : startTrack(); }
+
+function clearTrack(){
+  const t = dayTrack();
+  if(!t.length) return;
+  if(!confirm(`이 날의 이동 기록 ${trackDistKm(t).toFixed(1)}km 를 지웁니다. 되돌릴 수 없습니다.`)) return;
+  if(tracking()) stopTrack();
+  delete S.days[curDay].track;
+  MAP.setTrack(null);
+  save(); renderTrackBar();
+  toast('이동 기록을 지웠습니다');
+}
+
+// 기록 버튼과 요약바의 기록 거리를 갱신한다. 목록을 다시 그릴 때와, 기록 중 점이
+// 들어올 때마다 부른다 (점 하나마다 화면 전체를 다시 그릴 이유는 없다).
+function renderTrackBar(){
+  const km = trackDistKm(dayTrack());
+  const btn = document.getElementById('trackBtn');
+  if(btn){
+    btn.textContent = tracking() ? `기록 중 ${km.toFixed(1)}km`
+                     : (km ? `기록 ${km.toFixed(1)}km` : '이동 기록');
+    btn.setAttribute('aria-pressed', tracking());
+  }
+  const del = document.getElementById('trackDel');
+  if(del) del.hidden = !dayTrack().length || tracking();
+  const sum = document.getElementById('sumTrack');
+  if(sum) sum.innerHTML = km ? `실제 이동 <b>${km.toFixed(1)}km</b>` : '';
+}
 
 
 /* ─────────── 10-main.js ─────────── */

@@ -69,17 +69,22 @@ async function fetchOsrm(){
 }
 
 /* ══════════════ 스케줄 계산 ══════════════ */
+// 일정마다 시간은 하나뿐이다: item.at = 그 장소에 "도착"하는 시각.
+// 비워두면 앞 일정 도착 시각 + 이동시간으로 계산한다(rows[].auto).
+// 적어 둔 도착 시각이 그렇게 계산한 시각보다 이르면 그만큼 "부족"으로 경고한다 -
+// 앞 일정에서 출발해 제때 닿을 수 없다는 뜻이고, 이게 이 앱의 핵심 가치다.
 function schedule(day){
-  let cur = toMin(day.start) ?? 9*60;
+  let cur = toMin(day.start) ?? 9*60;   // 앞 일정에서 이어질 때 가장 이른 도착 가능 시각
   const out=[]; let totKm=0, totMove=0, lateN=0, airKm=0;
   day.items.forEach((item,idx)=>{
-    let start=cur, late=0;
-    if(item.fix!=null){
-      const f=toMin(item.fix);
-      if(cur > f + 5){ late = cur - f; lateN++; }
-      start = f;
+    const at = toMin(item.at);
+    let start, late=0;
+    if(at!=null){
+      start = at;
+      if(idx > 0 && cur > at + 5){ late = cur - at; lateN++; }
+    }else{
+      start = cur;
     }
-    const end = start + (item.stay||0);
     let lg={mode:'none'};
     const nx = day.items[idx+1];
     if(nx){
@@ -89,8 +94,9 @@ function schedule(day){
       if(lg.km && !lg.skip){ totKm+=lg.km; totMove+=lg.min; }
       if(lg.skip && lg.km) airKm += lg.km;
     }
-    cur = end + (lg.min||0);
-    out.push({item, start, end, late, leg:lg});
+    cur = start + (lg.min||0);
+    out.push({item, start, late, leg:lg, auto: at==null});
   });
-  return {rows:out, endAt:cur, totKm, totMove, lateN, airKm};
+  return {rows:out, endAt: out.length ? out[out.length-1].start : cur,
+          totKm, totMove, lateN, airKm};
 }

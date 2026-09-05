@@ -21,17 +21,55 @@ async function load(){
   try{
     if(!window.storage) return;
     const r = await window.storage.get(KEY);
-    if(r && r.value){ const p = JSON.parse(r.value); if(p && p.days) S = migrate(p); }
+    // migrate() 안에서 leg() 가 S.cfg 를 읽으므로 먼저 S 에 넣고 제자리에서 올린다.
+    if(r && r.value){ const p = JSON.parse(r.value); if(p && p.days){ S = p; migrate(); } }
   }catch(e){ /* 최초 실행 */ }
 }
 
-// 저장해 둔 데이터를 최신 형식으로 올린다. 설정 기본값을 바꿔도 이미 저장된 사람에게는
+// 저장해 둔 데이터를 최신 형식으로 올린다. 기본값이나 형식을 바꿔도 이미 저장된 사람에게는
 // 반영되지 않으므로(그래서 "바뀐 게 없다"로 보인다) 여기서 한 번 올려준다.
-function migrate(p){
-  p.cfg = p.cfg || {};
-  if(!(p.ver >= 2)){
-    p.cfg.osrm = true;   // 실제 도로 경로를 기본으로
-    p.ver = 2;
+function migrate(){
+  S.cfg = S.cfg || {};
+  if(!(S.ver >= 2)){
+    S.cfg.osrm = true;   // 실제 도로 경로를 기본으로
+    S.ver = 2;
   }
-  return p;
+  if(!(S.ver >= 3)){
+    // 고정시각(fix)+체류시간(stay) → 도착시각(at) 하나로. 그냥 fix 만 옮기면 체류시간으로
+    // 밀려 있던 뒷 일정들의 시각이 통째로 당겨져 버린다. 옛 규칙 그대로 한 번 계산해서
+    // 지금 화면에 보이던 시각을 그대로 굳힌다.
+    S.days.forEach(day=>{
+      legacyStarts(day).forEach((min, i)=>{ day.items[i].at = minToHHMM(min); });
+      day.items.forEach(item=>{ delete item.fix; delete item.stay; });
+    });
+    S.ver = 3;
+  }
+}
+
+const minToHHMM = m => {
+  m = ((Math.round(m) % 1440) + 1440) % 1440;
+  return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+};
+
+// ver 2 이하의 스케줄 규칙(고정시각 + 체류시간 + 이동시간)을 그대로 재현한다.
+// 이전 목적으로만 쓴다 - 03-schedule.js 의 schedule() 은 이미 새 규칙으로 바뀌었다.
+function legacyStarts(day){
+  let cur = toMin(day.start) ?? 9*60;
+  const out = [];
+  day.items.forEach((item, idx)=>{
+    let start = cur;
+    if(item.fix != null) start = toMin(item.fix);
+    const end = start + (item.stay || 0);
+    let min = 0;
+    const nx = day.items[idx+1];
+    if(nx){
+      const A = item.lat!=null ? [item.lat,item.lng] : null;
+      const B = nx.lat!=null ? [nx.lat,nx.lng] : null;
+      const lg = leg(A, B, item.move);
+      min = lg.min || 0;
+    }
+    cur = end + min;
+    out.push(start);
+  });
+  return out;
 }

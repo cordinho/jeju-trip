@@ -33,8 +33,10 @@ function render_(fit){
     `<span>육상 <b>${sc.totKm?sc.totKm.toFixed(1):0}km</b></span>` +
     (sc.airKm?`<span>항공 <b>${Math.round(sc.airKm)}km</b></span>`:'') +
     `<span>이동시간 <b>${dur(sc.totMove)}</b></span>` +
-    `<span>종료 <b>${fmt(sc.endAt)}</b></span>` +
-    (sc.lateN?`<span class="warn">고정시각 충돌 ${sc.lateN}건</span>`:`<span style="color:var(--ok)">시간 여유 있음</span>`);
+    `<span>마지막 <b>${fmt(sc.endAt)}</b></span>` +
+    // 기록 거리는 기록 중에도 계속 바뀌므로 renderTrackBar() 가 채운다 (09-track.js)
+    `<span class="trk" id="sumTrack"></span>` +
+    (sc.lateN?`<span class="warn">시간 부족 ${sc.lateN}건</span>`:`<span style="color:var(--ok)">시간 여유 있음</span>`);
 
   // 리스트
   const L1=document.getElementById('list'); L1.innerHTML='';
@@ -71,12 +73,11 @@ function render_(fit){
     const c=document.createElement('div');
     c.className='card'+(curItem&&curItem.id===r.item.id?' sel':'');
     const tags=[];
-    if(r.item.fix) tags.push(`<span class="tag fix">${r.item.fix} 고정</span>`);
-    if(r.item.stay) tags.push(`<span class="tag">${dur(r.item.stay)} 체류</span>`);
+    if(r.auto) tags.push(`<span class="tag">시간 자동 계산</span>`);
     if(r.item.lat==null) tags.push(`<span class="tag nogeo">위치 없음</span>`);
-    if(r.late) tags.push(`<span class="tag late">${dur(r.late)} 지각</span>`);
+    if(r.late) tags.push(`<span class="tag late">${dur(r.late)} 모자람</span>`);
     c.innerHTML=`
-      <div class="time"><div class="t">${fmt(r.start)}</div>${r.item.stay?`<div class="e">→ ${fmt(r.end)}</div>`:''}</div>
+      <div class="time"><div class="t">${fmt(r.start)}</div></div>
       <div class="body">
         <div class="name">${i+1}. ${esc(r.item.name)}</div>
         ${r.item.note?`<div class="meta">${esc(r.item.note)}</div>`:''}
