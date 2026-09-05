@@ -86,27 +86,7 @@ body.picking .mappicksave{display:block}
   display:flex;align-items:center;gap:10px;
   background:rgba(20,26,27,.88);color:#fff;font-size:12px;padding:7px 8px 7px 14px;border-radius:999px;white-space:nowrap}
 .maphint button{color:#fff;font-weight:700;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.18)}
-/* ---------- sync bar ---------- */
-.syncbar{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;
-  background:#F2F6F4;border-bottom:1px solid var(--line);color:var(--ink-2)}
-.syncbar .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
-.syncbar .dot.off{background:var(--mute)}
-.syncbar .dot.err{background:var(--lava)}
-.syncbar .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.syncbar button{font-size:11px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:#fff;flex:none}
-.rolechip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;flex:none}
-.rolechip.edit{background:#DCEFE1;color:#22603A}
-.rolechip.view{background:#E3E8EA;color:#4A5658}
-.conflict{background:#FBE9E4;border-bottom:1px solid #E7C0B5;padding:10px 14px;font-size:12px;color:#7A2C1B}
-.conflict b{display:block;margin-bottom:6px}
-.conflict button{font-size:12px;padding:6px 11px;border-radius:8px;border:1px solid #C1705C;background:#fff;color:#7A2C1B;margin-right:6px}
-.conflict button.pri{background:#7A2C1B;color:#fff;border-color:#7A2C1B}
-body.viewonly .ctrl,body.viewonly .fab,body.viewonly #btnAddTop,body.viewonly .insBtn{display:none}
 body.editing .fab{display:none}
-body.viewonly main{padding-bottom:20px}
-.linkbox{display:flex;gap:6px;margin-bottom:6px}
-.linkbox input{flex:1;font-size:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#F7F9F8}
-.linkbox button{flex:0 0 auto;padding:10px 13px;border:1px solid var(--ink);border-radius:10px;background:var(--ink);color:#fff;font-size:12px;font-weight:700}
 .sect{border-top:1px solid var(--line);margin:18px 0 14px;padding-top:16px}
 .sect h3{margin:0 0 4px;font-size:14px;font-weight:700}
 .sect p{margin:0 0 12px;font-size:12px;color:var(--mute);line-height:1.6}
@@ -183,6 +163,10 @@ main{padding:10px 12px 8px}
   border-radius:18px 18px 0 0;max-height:92dvh;display:none;flex-direction:column;
   box-shadow:0 -8px 40px rgba(0,0,0,.25)}
 .sheet.on{display:flex}
+/* 설정은 지도를 볼 이유가 없으므로 화면을 꽉 채운다.
+   top:0 으로 늘려 100dvh 같은 단위를 피한다 (CLAUDE.md 규칙 3). */
+#sheetSet{top:0;max-height:none;border-radius:0}
+#sheetSet .shead{padding-top:calc(14px + env(safe-area-inset-top))}
 .sheet header{background:none;border:0;padding:0}
 .shead{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 .shead h2{margin:0;font-size:16px;font-weight:700;flex:1;letter-spacing:-.02em}

@@ -759,27 +759,7 @@ body.picking .mappicksave{display:block}
   display:flex;align-items:center;gap:10px;
   background:rgba(20,26,27,.88);color:#fff;font-size:12px;padding:7px 8px 7px 14px;border-radius:999px;white-space:nowrap}
 .maphint button{color:#fff;font-weight:700;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.18)}
-/* ---------- sync bar ---------- */
-.syncbar{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;
-  background:#F2F6F4;border-bottom:1px solid var(--line);color:var(--ink-2)}
-.syncbar .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
-.syncbar .dot.off{background:var(--mute)}
-.syncbar .dot.err{background:var(--lava)}
-.syncbar .who{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.syncbar button{font-size:11px;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:#fff;flex:none}
-.rolechip{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;flex:none}
-.rolechip.edit{background:#DCEFE1;color:#22603A}
-.rolechip.view{background:#E3E8EA;color:#4A5658}
-.conflict{background:#FBE9E4;border-bottom:1px solid #E7C0B5;padding:10px 14px;font-size:12px;color:#7A2C1B}
-.conflict b{display:block;margin-bottom:6px}
-.conflict button{font-size:12px;padding:6px 11px;border-radius:8px;border:1px solid #C1705C;background:#fff;color:#7A2C1B;margin-right:6px}
-.conflict button.pri{background:#7A2C1B;color:#fff;border-color:#7A2C1B}
-body.viewonly .ctrl,body.viewonly .fab,body.viewonly #btnAddTop,body.viewonly .insBtn{display:none}
 body.editing .fab{display:none}
-body.viewonly main{padding-bottom:20px}
-.linkbox{display:flex;gap:6px;margin-bottom:6px}
-.linkbox input{flex:1;font-size:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#F7F9F8}
-.linkbox button{flex:0 0 auto;padding:10px 13px;border:1px solid var(--ink);border-radius:10px;background:var(--ink);color:#fff;font-size:12px;font-weight:700}
 .sect{border-top:1px solid var(--line);margin:18px 0 14px;padding-top:16px}
 .sect h3{margin:0 0 4px;font-size:14px;font-weight:700}
 .sect p{margin:0 0 12px;font-size:12px;color:var(--mute);line-height:1.6}
@@ -856,6 +836,10 @@ main{padding:10px 12px 8px}
   border-radius:18px 18px 0 0;max-height:92dvh;display:none;flex-direction:column;
   box-shadow:0 -8px 40px rgba(0,0,0,.25)}
 .sheet.on{display:flex}
+/* 설정은 지도를 볼 이유가 없으므로 화면을 꽉 채운다.
+   top:0 으로 늘려 100dvh 같은 단위를 피한다 (CLAUDE.md 규칙 3). */
+#sheetSet{top:0;max-height:none;border-radius:0}
+#sheetSet .shead{padding-top:calc(14px + env(safe-area-inset-top))}
 .sheet header{background:none;border:0;padding:0}
 .shead{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 .shead h2{margin:0;font-size:16px;font-weight:700;flex:1;letter-spacing:-.02em}
@@ -908,14 +892,10 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
     </div>
     <div class="spacer"></div>
     <button class="iconbtn" id="btnAddTop">+ 일정</button>
-    <button class="iconbtn" id="btnShare">공유</button>
     <button class="iconbtn" id="btnSet">설정</button>
   </div>
   <div class="days" id="days" role="tablist"></div>
 </header>
-
-<div class="syncbar" id="syncbar" hidden></div>
-<div class="conflict" id="conflict" hidden></div>
 
 <div id="mapWrap">
   <div id="map"></div>
@@ -994,53 +974,6 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
   </div>
 </div>
 
-<!-- 공유 시트 -->
-<div class="sheet" id="sheetShare">
-  <div class="shead"><h2>공유</h2><button class="iconbtn" data-close>닫기</button></div>
-  <div class="sbody">
-    <label class="f"><span>내 이름 (누가 고쳤는지 표시됩니다)</span>
-      <input class="inp" id="fMe" placeholder="예: 지영"></label>
-
-    <div class="sect" style="border:0;margin-top:4px;padding-top:0">
-      <h3>공유 방</h3>
-      <p>방을 만들면 모두가 같은 일정을 봅니다. 한 사람이 고치면 다른 사람 화면은 10초 안에, 앱을 다시 열면 즉시 갱신됩니다.</p>
-      <div id="roomNone">
-        <button class="chip" id="btnRoomNew" style="width:100%;padding:13px;font-weight:700">공유 방 만들기</button>
-        <div style="height:10px"></div>
-        <div class="linkbox">
-          <input id="fJoinId" placeholder="방 ID 붙여넣기">
-          <button id="btnRoomJoin">참여</button>
-        </div>
-        <div class="linkbox">
-          <input id="fJoinPin" placeholder="편집 PIN (없으면 조회 전용)">
-        </div>
-      </div>
-      <div id="roomOn" hidden>
-        <p style="color:var(--ink-2)">방 ID <b id="roomIdTxt"></b></p>
-        <b style="font-size:13px">편집 링크</b>
-        <div class="linkbox"><input id="lnkEdit" readonly><button data-copy="lnkEdit">복사</button></div>
-        <b style="font-size:13px">조회 전용 링크</b>
-        <div class="linkbox"><input id="lnkView" readonly><button data-copy="lnkView">복사</button></div>
-        <div class="actions" style="margin-top:12px">
-          <button class="ghost" id="btnRoomLeave">방 나가기</button>
-          <button id="btnShareNative">링크 보내기</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="sect">
-      <h3>스냅샷 링크</h3>
-      <p>지금 이 순간의 일정을 링크 자체에 통째로 담습니다. 서버를 전혀 쓰지 않아 어디서든 열리지만, 이후 수정은 반영되지 않는 조회 전용입니다.</p>
-      <div class="linkbox"><input id="lnkSnap" readonly><button data-copy="lnkSnap">복사</button></div>
-      <button class="chip" id="btnSnapMake">스냅샷 만들기</button>
-    </div>
-
-    <div class="sect">
-      <p style="margin:0">공유 방은 링크를 아는 사람만 접근합니다. 편집 PIN은 실수로 고치는 것을 막는 장치이지 암호화된 보안이 아닙니다. 민감한 정보는 넣지 마세요.</p>
-    </div>
-  </div>
-</div>
-
 <!-- 추천 장소 시트 -->
 <div class="sheet" id="sheetPoi">
   <div class="shead"><h2>추천 장소</h2><button class="iconbtn" data-close>닫기</button></div>
@@ -1055,7 +988,7 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
   <div class="shead"><h2>설정</h2><button class="iconbtn" data-close>닫기</button></div>
   <div class="sbody">
     <div class="switch">
-      <div><b>실제 도로 경로 사용</b><small>OSRM으로 자차 구간의 실거리·소요시간을 가져옵니다. 오프라인이면 추정치로 대체.</small></div>
+      <div><b>실제 도로 경로 사용</b><small>자차 구간의 실거리·소요시간을 도로 경로로 계산합니다. 항공·배 구간은 제외되며, 연결이 안 되면 추정치로 대체합니다.</small></div>
       <button class="tg" id="sOsrm" aria-pressed="false"></button>
     </div>
     <div style="height:14px"></div>
@@ -1148,9 +1081,11 @@ const SEHWA = [33.5245, 126.8577];     // 세화민속오일시장
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
+// ver 2: 실제 도로 경로(OSRM)를 기본으로 켠다. 02-state.js 의 migrate() 가 ver 1 로
+// 저장돼 있던 기존 데이터도 한 번 올려준다.
 function seed(){ return {
-  ver: 1,
-  cfg: { walkKm:1, walkSp:4.5, driveSp:40, detour:1.35, buffer:5, osrm:false },
+  ver: 2,
+  cfg: { walkKm:1, walkSp:4.5, driveSp:40, detour:1.35, buffer:5, osrm:true },
   days: [
     { id:'d1', label:'10/29', dow:'목', start:'14:50', items:[
       it('집 출발', null, 0, '14:50', '', 'none'),
@@ -1213,18 +1148,31 @@ let insertAt = null; // 새 일정을 저장할 때 끼워 넣을 위치. null�
 let editOpen = false; // 편집 폼이 목록 안에 펼쳐져 있는가 (시트가 아니라 인라인이다)
 const legCache = {};
 
+// 공유 방을 없앤 뒤로 편집 권한 개념이 사라졌다. 호출부를 그대로 두려고 함수만 남긴다.
+const canEdit = () => true;
+
 /* ══════════════ 저장 ══════════════ */
 const KEY = 'jeju-trip-v1';
-async function save(localOnly){
+async function save(){
   try{ if(window.storage) await window.storage.set(KEY, JSON.stringify(S)); }catch(e){}
-  if(!localOnly) queuePush();
 }
 async function load(){
   try{
     if(!window.storage) return;
     const r = await window.storage.get(KEY);
-    if(r && r.value){ const p = JSON.parse(r.value); if(p && p.days) S = p; }
+    if(r && r.value){ const p = JSON.parse(r.value); if(p && p.days) S = migrate(p); }
   }catch(e){ /* 최초 실행 */ }
+}
+
+// 저장해 둔 데이터를 최신 형식으로 올린다. 설정 기본값을 바꿔도 이미 저장된 사람에게는
+// 반영되지 않으므로(그래서 "바뀐 게 없다"로 보인다) 여기서 한 번 올려준다.
+function migrate(p){
+  p.cfg = p.cfg || {};
+  if(!(p.ver >= 2)){
+    p.cfg.osrm = true;   // 실제 도로 경로를 기본으로
+    p.ver = 2;
+  }
+  return p;
 }
 
 
@@ -2073,251 +2021,6 @@ document.getElementById('btnAdd').onclick=()=>openEdit(null);
 document.getElementById('btnAddTop').onclick=()=>openEdit(null);
 
 
-/* ─────────── 09-sync.js ─────────── */
-/* 브라우저가 순서대로 로드하는 일반 스크립트입니다.
-   ES 모듈이 아니므로 import/export를 쓰지 마세요 - file:// 에서도 열려야 합니다.
-   최상위 const/let/function 은 스크립트 간에 공유됩니다. 순서는 index.html 이 결정합니다. */
-
-/* ══════════════ 공유 & 동기화 ══════════════ */
-const RKEY = 'jeju-room-v1';
-const API  = 'https://jsonblob.com/api/jsonBlob';
-let ROOM = {id:null, role:'edit', pin:'', me:''};
-let snapshotMode = false;   // 스냅샷 링크로 열림 → 조회 전용
-let baseRev = 0, remoteInfo = null, pushT = null, pollT = null, busy = false;
-
-const canEdit = () => !snapshotMode && (!ROOM.id || ROOM.role === 'edit');
-
-/* base64url (유니코드 안전) */
-function b64e(obj){
-  const b = new TextEncoder().encode(JSON.stringify(obj));
-  let s=''; for(let i=0;i<b.length;i+=8192) s += String.fromCharCode.apply(null, b.subarray(i,i+8192));
-  return btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-}
-function b64d(str){
-  const s = atob(str.replace(/-/g,'+').replace(/_/g,'/'));
-  const b = new Uint8Array(s.length); for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i);
-  return JSON.parse(new TextDecoder().decode(b));
-}
-
-function baseUrl(){ return location.href.split('#')[0]; }
-function linkEdit(){ return baseUrl()+'#r='+ROOM.id+'&k='+encodeURIComponent(ROOM.pin||''); }
-function linkView(){ return baseUrl()+'#r='+ROOM.id; }
-
-async function saveRoom(){ try{ if(window.storage) await window.storage.set(RKEY, JSON.stringify(ROOM)); }catch(e){} }
-async function loadRoom(){
-  try{ if(!window.storage) return; const r=await window.storage.get(RKEY);
-    if(r&&r.value) ROOM = Object.assign(ROOM, JSON.parse(r.value)); }catch(e){}
-}
-
-function readHash(){
-  const h = new URLSearchParams(location.hash.replace(/^#/,''));
-  if(h.get('d')){
-    try{ const p=b64d(h.get('d')); if(p&&p.days){ S=p; snapshotMode=true; } }catch(e){ toast('링크를 읽을 수 없습니다'); }
-    return;
-  }
-  if(h.get('r')){
-    ROOM.id  = h.get('r');
-    ROOM.pin = h.get('k') || '';
-    ROOM.role = h.get('k') ? 'edit' : 'view';
-  }
-}
-
-/* ---- 방 API ---- */
-async function roomRead(){
-  const r = await fetch(API+'/'+ROOM.id, {headers:{'Accept':'application/json'}});
-  if(!r.ok) throw new Error('read '+r.status);
-  return r.json();
-}
-async function roomWrite(doc){
-  const r = await fetch(API+'/'+ROOM.id, {
-    method:'PUT', headers:{'Content-Type':'application/json','Accept':'application/json'},
-    body: JSON.stringify(doc)});
-  if(!r.ok) throw new Error('write '+r.status);
-}
-function pack(){
-  return {app:'jeju-trip', pin:ROOM.pin||'', rev:baseRev+1,
-          updatedAt:Date.now(), by:ROOM.me||'익명', data:S};
-}
-
-async function roomCreate(){
-  const pin = String(Math.floor(1000+Math.random()*9000));
-  const doc = {app:'jeju-trip', pin, rev:1, updatedAt:Date.now(), by:ROOM.me||'익명', data:S};
-  const r = await fetch(API, {method:'POST',
-    headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify(doc)});
-  if(!r.ok) throw new Error('create '+r.status);
-  const loc = r.headers.get('Location') || r.headers.get('X-jsonblob');
-  if(!loc) throw new Error('noid');
-  const id = loc.split('/').filter(Boolean).pop();
-  ROOM = {id, role:'edit', pin, me:ROOM.me};
-  baseRev = 1;
-  await saveRoom();
-  history.replaceState(null,'', linkEdit());
-}
-
-/* ---- 당겨오기 / 밀어넣기 ---- */
-async function pull(silent){
-  if(!ROOM.id || busy) return;
-  busy = true;
-  try{
-    const doc = await roomRead();
-    remoteInfo = {rev:doc.rev||0, at:doc.updatedAt, by:doc.by};
-    if(ROOM.role==='edit' && doc.pin && ROOM.pin && doc.pin!==ROOM.pin) ROOM.role='view';
-    if((doc.rev||0) > baseRev){
-      S = doc.data; baseRev = doc.rev||0;
-      await save(true);
-      render(false);
-      if(!silent) toast((doc.by||'누군가')+'님의 수정을 반영했습니다');
-    }
-    setSync('ok');
-  }catch(e){ setSync('err'); }
-  busy = false;
-  renderSyncbar();
-}
-
-function queuePush(){
-  if(!ROOM.id || !canEdit()) return;
-  clearTimeout(pushT);
-  pushT = setTimeout(push, 1200);
-}
-async function push(){
-  if(!ROOM.id || !canEdit() || busy) return;
-  busy = true;
-  try{
-    const cur = await roomRead();
-    if((cur.rev||0) > baseRev){          // 남이 먼저 고침
-      showConflict(cur);
-      busy = false; return;
-    }
-    const doc = pack();
-    await roomWrite(doc);
-    baseRev = doc.rev; remoteInfo = {rev:doc.rev, at:doc.updatedAt, by:doc.by};
-    setSync('ok');
-  }catch(e){ setSync('err'); }
-  busy = false;
-  renderSyncbar();
-}
-
-function showConflict(cur){
-  const el = document.getElementById('conflict');
-  el.hidden = false;
-  el.innerHTML = `<b>${esc(cur.by||'다른 사람')}님이 먼저 수정했습니다</b>
-    내 변경과 충돌합니다. 한쪽을 선택하세요.
-    <div style="margin-top:8px">
-      <button class="pri" id="cfTake">상대 것 불러오기</button>
-      <button id="cfMine">내 것으로 덮어쓰기</button>
-    </div>`;
-  el.querySelector('#cfTake').onclick=async()=>{
-    S=cur.data; baseRev=cur.rev||0; el.hidden=true; await save(true); render(true); toast('최신 일정을 불러왔습니다');
-  };
-  el.querySelector('#cfMine').onclick=async()=>{
-    baseRev = cur.rev||0; el.hidden=true; await push(); toast('내 일정으로 덮어썼습니다');
-  };
-}
-
-let syncState='off';
-function setSync(s){ syncState=s; }
-function ago(ts){
-  if(!ts) return '';
-  const m=Math.floor((Date.now()-ts)/60000);
-  if(m<1) return '방금'; if(m<60) return m+'분 전';
-  const h=Math.floor(m/60); if(h<24) return h+'시간 전'; return Math.floor(h/24)+'일 전';
-}
-function renderSyncbar(){
-  const bar=document.getElementById('syncbar');
-  if(!ROOM.id && !snapshotMode){ bar.hidden=true; return; }
-  bar.hidden=false;
-  if(snapshotMode){
-    bar.innerHTML=`<span class="dot off"></span><span class="rolechip view">스냅샷</span>
-      <span class="who">받은 링크 시점의 일정입니다</span>
-      <button id="sbFork">내 것으로 복사</button>`;
-    bar.querySelector('#sbFork').onclick=async()=>{
-      snapshotMode=false; history.replaceState(null,'',baseUrl()); await save(true);
-      document.body.classList.remove('viewonly'); renderSyncbar(); render(true); toast('이제 편집할 수 있습니다');
-    };
-    return;
-  }
-  const cls = syncState==='err'?'err':(syncState==='ok'?'':'off');
-  const who = remoteInfo ? `${esc(remoteInfo.by||'')} · ${ago(remoteInfo.at)} 수정` : '동기화 대기';
-  bar.innerHTML=`<span class="dot ${cls}"></span>
-    <span class="rolechip ${ROOM.role==='edit'?'edit':'view'}">${ROOM.role==='edit'?'편집 가능':'조회 전용'}</span>
-    <span class="who">${syncState==='err'?'연결 실패 — 로컬에만 저장됨':who}</span>
-    <button id="sbSync">새로고침</button>`;
-  bar.querySelector('#sbSync').onclick=()=>pull(false);
-}
-
-function startPolling(){
-  clearInterval(pollT);
-  if(!ROOM.id) return;
-  pollT = setInterval(()=>{ if(document.visibilityState==='visible') pull(true); }, 10000);
-}
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') pull(true); });
-window.addEventListener('focus',()=>pull(true));
-
-function applyRole(){
-  document.body.classList.toggle('viewonly', !canEdit());
-}
-
-/* ---- 공유 시트 UI ---- */
-document.getElementById('btnShare').onclick=()=>{
-  document.getElementById('fMe').value = ROOM.me||'';
-  document.getElementById('roomNone').hidden = !!ROOM.id;
-  document.getElementById('roomOn').hidden = !ROOM.id;
-  if(ROOM.id){
-    document.getElementById('roomIdTxt').textContent = ROOM.id;
-    document.getElementById('lnkEdit').value = linkEdit();
-    document.getElementById('lnkView').value = linkView();
-  }
-  openSheet('sheetShare');
-};
-document.getElementById('fMe').onchange=e=>{ ROOM.me=e.target.value.trim(); saveRoom(); };
-document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=async()=>{
-  const i=document.getElementById(b.dataset.copy);
-  if(!i.value) return toast('먼저 링크를 만드세요');
-  try{ await navigator.clipboard.writeText(i.value); }catch(e){ i.select(); document.execCommand('copy'); }
-  toast('복사했습니다');
-});
-document.getElementById('btnRoomNew').onclick=async()=>{
-  ROOM.me = document.getElementById('fMe').value.trim() || ROOM.me;
-  toast('방을 만드는 중…');
-  try{
-    await roomCreate();
-    document.getElementById('btnShare').click();
-    startPolling(); applyRole(); renderSyncbar();
-    toast('방을 만들었습니다');
-  }catch(e){
-    toast('방 생성 실패 — 스냅샷 링크를 쓰세요');
-  }
-};
-document.getElementById('btnRoomJoin').onclick=async()=>{
-  const id=document.getElementById('fJoinId').value.trim().split('/').filter(Boolean).pop();
-  if(!id) return toast('방 ID를 입력하세요');
-  ROOM = {id, pin:document.getElementById('fJoinPin').value.trim(),
-          role: document.getElementById('fJoinPin').value.trim()?'edit':'view',
-          me: document.getElementById('fMe').value.trim()||ROOM.me};
-  baseRev = 0;
-  await saveRoom();
-  history.replaceState(null,'', ROOM.role==='edit'?linkEdit():linkView());
-  await pull(false);
-  startPolling(); applyRole(); renderSyncbar(); closeSheets();
-};
-document.getElementById('btnRoomLeave').onclick=async()=>{
-  ROOM={id:null, role:'edit', pin:'', me:ROOM.me}; baseRev=0; remoteInfo=null;
-  clearInterval(pollT); await saveRoom(); history.replaceState(null,'',baseUrl());
-  applyRole(); renderSyncbar(); closeSheets(); toast('방에서 나왔습니다 (일정은 이 기기에 남습니다)');
-};
-document.getElementById('btnShareNative').onclick=async()=>{
-  const url = ROOM.role==='edit'?linkEdit():linkView();
-  if(navigator.share){ try{ await navigator.share({title:'제주 일정', url}); }catch(e){} }
-  else { try{ await navigator.clipboard.writeText(url); toast('링크를 복사했습니다'); }catch(e){} }
-};
-document.getElementById('btnSnapMake').onclick=()=>{
-  const url = baseUrl()+'#d='+b64e(S);
-  const i=document.getElementById('lnkSnap'); i.value=url;
-  if(url.length>16000) toast('일정이 커서 링크가 깁니다. 공유 방을 권장합니다');
-  else toast('스냅샷 링크를 만들었습니다');
-};
-
-
 /* ─────────── 10-main.js ─────────── */
 /* 브라우저가 순서대로 로드하는 일반 스크립트입니다.
    ES 모듈이 아니므로 import/export를 쓰지 마세요 - file:// 에서도 열려야 합니다.
@@ -2344,12 +2047,7 @@ measureHeader();
 
 (async function init(){
   await load();
-  await loadRoom();
-  readHash();
-  applyRole();
-  renderSyncbar();
   render(true);
-  if(ROOM.id){ await pull(false); startPolling(); applyRole(); }
   refreshOsrm();
   const inval = ()=>{ try{ MAP.resize(); measureHeader(); }catch(e){} };
   [0,120,400,900,1800].forEach(t=>setTimeout(inval,t));

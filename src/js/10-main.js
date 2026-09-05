@@ -23,12 +23,7 @@ measureHeader();
 
 (async function init(){
   await load();
-  await loadRoom();
-  readHash();
-  applyRole();
-  renderSyncbar();
   render(true);
-  if(ROOM.id){ await pull(false); startPolling(); applyRole(); }
   refreshOsrm();
   const inval = ()=>{ try{ MAP.resize(); measureHeader(); }catch(e){} };
   [0,120,400,900,1800].forEach(t=>setTimeout(inval,t));

@@ -11,9 +11,11 @@ const SEHWA = [33.5245, 126.8577];     // 세화민속오일시장
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
+// ver 2: 실제 도로 경로(OSRM)를 기본으로 켠다. 02-state.js 의 migrate() 가 ver 1 로
+// 저장돼 있던 기존 데이터도 한 번 올려준다.
 function seed(){ return {
-  ver: 1,
-  cfg: { walkKm:1, walkSp:4.5, driveSp:40, detour:1.35, buffer:5, osrm:false },
+  ver: 2,
+  cfg: { walkKm:1, walkSp:4.5, driveSp:40, detour:1.35, buffer:5, osrm:true },
   days: [
     { id:'d1', label:'10/29', dow:'목', start:'14:50', items:[
       it('집 출발', null, 0, '14:50', '', 'none'),

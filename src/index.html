@@ -18,14 +18,10 @@
     </div>
     <div class="spacer"></div>
     <button class="iconbtn" id="btnAddTop">+ 일정</button>
-    <button class="iconbtn" id="btnShare">공유</button>
     <button class="iconbtn" id="btnSet">설정</button>
   </div>
   <div class="days" id="days" role="tablist"></div>
 </header>
-
-<div class="syncbar" id="syncbar" hidden></div>
-<div class="conflict" id="conflict" hidden></div>
 
 <div id="mapWrap">
   <div id="map"></div>
@@ -104,53 +100,6 @@
   </div>
 </div>
 
-<!-- 공유 시트 -->
-<div class="sheet" id="sheetShare">
-  <div class="shead"><h2>공유</h2><button class="iconbtn" data-close>닫기</button></div>
-  <div class="sbody">
-    <label class="f"><span>내 이름 (누가 고쳤는지 표시됩니다)</span>
-      <input class="inp" id="fMe" placeholder="예: 지영"></label>
-
-    <div class="sect" style="border:0;margin-top:4px;padding-top:0">
-      <h3>공유 방</h3>
-      <p>방을 만들면 모두가 같은 일정을 봅니다. 한 사람이 고치면 다른 사람 화면은 10초 안에, 앱을 다시 열면 즉시 갱신됩니다.</p>
-      <div id="roomNone">
-        <button class="chip" id="btnRoomNew" style="width:100%;padding:13px;font-weight:700">공유 방 만들기</button>
-        <div style="height:10px"></div>
-        <div class="linkbox">
-          <input id="fJoinId" placeholder="방 ID 붙여넣기">
-          <button id="btnRoomJoin">참여</button>
-        </div>
-        <div class="linkbox">
-          <input id="fJoinPin" placeholder="편집 PIN (없으면 조회 전용)">
-        </div>
-      </div>
-      <div id="roomOn" hidden>
-        <p style="color:var(--ink-2)">방 ID <b id="roomIdTxt"></b></p>
-        <b style="font-size:13px">편집 링크</b>
-        <div class="linkbox"><input id="lnkEdit" readonly><button data-copy="lnkEdit">복사</button></div>
-        <b style="font-size:13px">조회 전용 링크</b>
-        <div class="linkbox"><input id="lnkView" readonly><button data-copy="lnkView">복사</button></div>
-        <div class="actions" style="margin-top:12px">
-          <button class="ghost" id="btnRoomLeave">방 나가기</button>
-          <button id="btnShareNative">링크 보내기</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="sect">
-      <h3>스냅샷 링크</h3>
-      <p>지금 이 순간의 일정을 링크 자체에 통째로 담습니다. 서버를 전혀 쓰지 않아 어디서든 열리지만, 이후 수정은 반영되지 않는 조회 전용입니다.</p>
-      <div class="linkbox"><input id="lnkSnap" readonly><button data-copy="lnkSnap">복사</button></div>
-      <button class="chip" id="btnSnapMake">스냅샷 만들기</button>
-    </div>
-
-    <div class="sect">
-      <p style="margin:0">공유 방은 링크를 아는 사람만 접근합니다. 편집 PIN은 실수로 고치는 것을 막는 장치이지 암호화된 보안이 아닙니다. 민감한 정보는 넣지 마세요.</p>
-    </div>
-  </div>
-</div>
-
 <!-- 추천 장소 시트 -->
 <div class="sheet" id="sheetPoi">
   <div class="shead"><h2>추천 장소</h2><button class="iconbtn" data-close>닫기</button></div>
@@ -165,7 +114,7 @@
   <div class="shead"><h2>설정</h2><button class="iconbtn" data-close>닫기</button></div>
   <div class="sbody">
     <div class="switch">
-      <div><b>실제 도로 경로 사용</b><small>OSRM으로 자차 구간의 실거리·소요시간을 가져옵니다. 오프라인이면 추정치로 대체.</small></div>
+      <div><b>실제 도로 경로 사용</b><small>자차 구간의 실거리·소요시간을 도로 경로로 계산합니다. 항공·배 구간은 제외되며, 연결이 안 되면 추정치로 대체합니다.</small></div>
       <button class="tg" id="sOsrm" aria-pressed="false"></button>
     </div>
     <div style="height:14px"></div>
@@ -200,7 +149,6 @@
 <script src="js/06-render.js"></script>
 <script src="js/07-editor.js"></script>
 <script src="js/08-settings.js"></script>
-<script src="js/09-sync.js"></script>
 <script src="js/10-main.js"></script>
 </body>
 </html>
