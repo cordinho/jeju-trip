@@ -176,21 +176,56 @@ async function doSearch(){
 // 픽 시작 시점의 편집 대상을 pickItem 에 따로 잡아둔다 - 픽 도중 날짜 탭을 눌러
 // curItem 이 바뀌어도(=null) 원래 편집하던 항목으로 정확히 돌아가기 위해서다.
 let pickItem = null;
+let pickLL = null;   // 마지막으로 지도에서 누른 좌표 (아직 확정 전일 수 있다)
+
 function startPick(){
   pickMode=true; pickItem=curItem;
   // 핀 위를 누르면 그 핀의 항목이 선택돼 버려 위치 지정이 먹히지 않았다.
   // 찍는 동안에는 핀이 클릭을 가로채지 않게 해 지도가 직접 받도록 한다.
   document.body.classList.add('picking');
+  // 이미 좌표가 있으면 거기서부터 시작한다 (저장된 상태이므로 버튼은 흐리게).
+  const lat=parseFloat(document.getElementById('fLat').value);
+  const lng=parseFloat(document.getElementById('fLng').value);
+  if(isFinite(lat)&&isFinite(lng)){
+    pickLL={lat,lng}; MAP.setPickMarker([lat,lng]); markPickSaved(true);
+  }else{
+    pickLL=null; MAP.clearPickMarker(); markPickSaved(false);
+  }
   hintEl=document.createElement('div');
   hintEl.className='maphint';
-  hintEl.innerHTML='<span>지도를 눌러 위치를 지정하세요</span><button type="button">취소</button>';
-  hintEl.querySelector('button').onclick=e=>{ e.stopPropagation(); cancelPick(); };
+  hintEl.innerHTML='<span>지도를 눌러 위치를 고르세요</span><button type="button">완료</button>';
+  hintEl.querySelector('button').onclick=e=>{ e.stopPropagation(); finishPick(); };
   document.getElementById('map').appendChild(hintEl);
 }
-function cancelPick(){ const it=pickItem; endPick(); openEdit(it, true); }
+
+// 지도를 누를 때마다 미리보기 핀만 옮긴다. 몇 번이든 다시 눌러 조정할 수 있다.
+function onPickMapClick(ll){
+  pickLL = {lat:ll.lat, lng:ll.lng};
+  MAP.setPickMarker([ll.lat, ll.lng]);
+  markPickSaved(false);   // 아직 확정 전 → 버튼을 진하게
+}
+
+// 지도 우측 "위치 저장" 버튼. 마지막으로 누른 좌표를 폼에 확정한다.
+function savePickedLocation(){
+  if(!pickLL) return toast('먼저 지도를 눌러 위치를 고르세요');
+  document.getElementById('fLat').value = pickLL.lat.toFixed(5);
+  document.getElementById('fLng').value = pickLL.lng.toFixed(5);
+  updateLocStat();
+  markPickSaved(true);
+  toast('위치를 저장했습니다');
+}
+
+// 완료: 확정 안 한 좌표가 남아 있으면 같이 확정하고 편집 폼으로 돌아간다
+// (눌러만 두고 저장을 깜빡했을 때 조용히 잃지 않도록).
+function finishPick(){
+  if(pickLL) savePickedLocation();
+  const it=pickItem; endPick(); openEdit(it, true);
+}
+
 function endPick(){
-  pickMode=null; pickItem=null;
+  pickMode=null; pickItem=null; pickLL=null;
   document.body.classList.remove('picking');
+  MAP.clearPickMarker(); markPickSaved(false);
   if(hintEl){hintEl.remove();hintEl=null;}
 }
 document.getElementById('btnPickHere').onclick=startPick;

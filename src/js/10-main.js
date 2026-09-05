@@ -10,9 +10,14 @@ function toast(m){
 async function refreshOsrm(){ if(await fetchOsrm()) render(); }
 
 // 고정된 지도(#mapWrap)가 헤더 바로 밑에 붙도록 헤더 실제 높이를 CSS 변수로 넘긴다.
+// --pinned-h(헤더+지도)는 scroll-margin-top 에 쓴다. 브라우저가 스스로 요소를 스크롤해
+// 보여줄 때(입력칸에 포커스가 갈 때 등) 이게 없으면 고정된 지도 밑에 가려진다.
 function measureHeader(){
-  const h = document.querySelector('header').getBoundingClientRect().height;
-  document.documentElement.style.setProperty('--hdr-h', Math.round(h) + 'px');
+  const hdr = document.querySelector('header').getBoundingClientRect().height;
+  const map = document.getElementById('mapWrap').getBoundingClientRect().height;
+  const st = document.documentElement.style;
+  st.setProperty('--hdr-h', Math.round(hdr) + 'px');
+  st.setProperty('--pinned-h', Math.round(hdr + map) + 'px');
 }
 measureHeader();
 

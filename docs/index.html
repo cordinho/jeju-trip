@@ -740,6 +740,18 @@ body.picking .mm-mk{pointer-events:none}
   font-size:11px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.35);border:2px solid #fff;white-space:nowrap}
 .pin.wide{padding:0 8px}
 .pin.sel{background:var(--lava)}
+/* 위치를 고르는 동안 보여주는 미리보기 핀 */
+.pin.pick{background:var(--tangerine);width:28px;height:28px;font-size:15px;
+  box-shadow:0 0 0 4px rgba(238,108,18,.25),0 1px 4px rgba(0,0,0,.35)}
+
+/* 지도 우측 "위치 저장" 버튼 - 위치를 고르는 동안에만 보인다 */
+.mappicksave{display:none}
+body.picking .mappicksave{display:block}
+.mappicksave a{display:block;padding:8px 12px;border-radius:999px;
+  background:var(--ink);color:#fff;font-size:12px;font-weight:700;text-decoration:none;
+  white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.3);transition:opacity .15s}
+/* 확정된 뒤에는 흐리게 해서 "지금 좌표는 저장됨"을 알린다 */
+.mappicksave.saved a{opacity:.45}
 .mm-off{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:1000;
   background:rgba(20,26,27,.82);color:#fff;font-size:11px;padding:5px 11px;border-radius:999px;
   white-space:nowrap;cursor:pointer}
@@ -781,6 +793,9 @@ body.viewonly main{padding-bottom:20px}
 main{padding:10px 12px 8px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
   display:flex;gap:10px;padding:10px 12px;align-items:flex-start}
+/* 지도가 화면 위에 고정돼 있으므로, 브라우저가 알아서 스크롤할 때(입력칸 포커스 등)
+   그 높이만큼 여유를 둬야 요소가 지도 밑에 숨지 않는다. --pinned-h 는 10-main.js 가 넣는다. */
+.card,.inp,.edbody .actions{scroll-margin-top:calc(var(--pinned-h,0px) + 10px)}
 .card.sel{border-color:var(--lava);box-shadow:0 0 0 2px rgba(168,64,44,.15)}
 /* 인라인 편집: 카드를 flex-wrap 시키고 폼을 100% 폭으로 아랫줄에 떨어뜨린다 */
 .card.open{flex-wrap:wrap;border-color:var(--ink);box-shadow:0 0 0 2px rgba(20,26,27,.10)}
@@ -1331,6 +1346,26 @@ fitCtl.onAdd = () => {
 };
 fitCtl.addTo(leafletMap);
 
+/* ---- 위치 지정용 "위치 저장" 버튼 (지도 우측, 찍는 동안에만 보임) ---- */
+// 예전에는 지도를 한 번 누르면 곧바로 좌표가 확정되고 폼으로 돌아가 버려서, 조금 빗나가면
+// 처음부터 다시 해야 했다. 지금은 몇 번이든 눌러 미리보기 핀을 옮긴 뒤 이 버튼으로 확정한다.
+let pickSaveEl = null;
+const pickCtl = L.control({ position: 'topright' });
+pickCtl.onAdd = () => {
+  const d = L.DomUtil.create('div', 'mappicksave');
+  d.innerHTML = '<a href="#" role="button">위치 저장</a>';
+  L.DomEvent.disableClickPropagation(d);
+  L.DomEvent.on(d, 'click', e => { e.preventDefault(); savePickedLocation(); });
+  pickSaveEl = d;
+  return d;
+};
+// addTo 는 지도 높이 컨트롤(⛶) 다음에 한다 - 컨트롤은 추가한 순서대로 쌓이는데, 이 버튼은
+// 위치를 고를 때만 나타나므로 중간에 끼면 나타날 때마다 아래 버튼이 밀려 내려간다.
+// 확정된 상태면 버튼을 흐리게 해 "지금 좌표는 저장됨"을 보여준다.
+function markPickSaved(saved){
+  if(pickSaveEl) pickSaveEl.classList.toggle('saved', !!saved);
+}
+
 /* ---- 지도 높이 조절 (드래그 핸들 + 전체화면 토글) ---- */
 // 기기별 화면 크기가 다르고, 지도를 크게 보고 싶을 때와 일정 목록이 더 필요할 때가 갈리므로
 // 핸들로 자유롭게 조절하고 마지막 값은 window.storage 에 남긴다 (기기별 로컬 취향이라 방/공유
@@ -1393,10 +1428,12 @@ fitCtl.addTo(leafletMap);
   fullCtl.addTo(leafletMap);
 })();
 
+pickCtl.addTo(leafletMap);   // 우측 버튼 묶음의 맨 아래에 오도록 마지막에 붙인다
+
 const MAP = (function(){
   let clickCb = null;
   const lines = [], markers = [];
-  let lastBounds = null, allPts = null;
+  let lastBounds = null, allPts = null, pickMk = null;
 
   leafletMap.on('click', e => { clickCb && clickCb({ lat: e.latlng.lat, lng: e.latlng.lng }); });
 
@@ -1443,20 +1480,24 @@ const MAP = (function(){
       else if(lastBounds) leafletMap.fitBounds(lastBounds);
     },
     resize(){ leafletMap.invalidateSize(); },
-    redraw(){ /* Leaflet 레이어는 addLine/addMarker 시점에 바로 반영되어 별도 재계산이 필요 없다 */ }
+    redraw(){ /* Leaflet 레이어는 addLine/addMarker 시점에 바로 반영되어 별도 재계산이 필요 없다 */ },
+
+    // 위치를 찍는 동안 보여줄 미리보기 핀. markers 배열에 넣지 않아 clear() 로 지워지지
+    // 않는다 - 찍는 도중 목록이 다시 그려져도 핀이 사라지면 안 되기 때문이다.
+    setPickMarker(ll){
+      if(pickMk){ pickMk.setLatLng(ll); return; }
+      pickMk = L.marker(ll, {
+        icon: L.divIcon({ html:'<div class="pin pick"><span>+</span></div>', className:'mm-mk', iconSize:[0,0] }),
+        interactive: false, zIndexOffset: 1000
+      }).addTo(leafletMap);
+    },
+    clearPickMarker(){ if(pickMk){ pickMk.remove(); pickMk=null; } }
   };
   return api;
 })();
 
-MAP.on('click', ll=>{
-  if(!pickMode) return;
-  document.getElementById('fLat').value = ll.lat.toFixed(5);
-  document.getElementById('fLng').value = ll.lng.toFixed(5);
-  const it = pickItem;
-  endPick();
-  openEdit(it, true);
-  toast('위치를 지정했습니다');
-});
+// 찍는 동안에는 확정하지 않고 미리보기 핀만 옮긴다. 확정은 "위치 저장" 버튼이 한다.
+MAP.on('click', ll=>{ if(pickMode) onPickMapClick(ll); });
 
 let hintEl = null;
 
@@ -1836,21 +1877,56 @@ async function doSearch(){
 // 픽 시작 시점의 편집 대상을 pickItem 에 따로 잡아둔다 - 픽 도중 날짜 탭을 눌러
 // curItem 이 바뀌어도(=null) 원래 편집하던 항목으로 정확히 돌아가기 위해서다.
 let pickItem = null;
+let pickLL = null;   // 마지막으로 지도에서 누른 좌표 (아직 확정 전일 수 있다)
+
 function startPick(){
   pickMode=true; pickItem=curItem;
   // 핀 위를 누르면 그 핀의 항목이 선택돼 버려 위치 지정이 먹히지 않았다.
   // 찍는 동안에는 핀이 클릭을 가로채지 않게 해 지도가 직접 받도록 한다.
   document.body.classList.add('picking');
+  // 이미 좌표가 있으면 거기서부터 시작한다 (저장된 상태이므로 버튼은 흐리게).
+  const lat=parseFloat(document.getElementById('fLat').value);
+  const lng=parseFloat(document.getElementById('fLng').value);
+  if(isFinite(lat)&&isFinite(lng)){
+    pickLL={lat,lng}; MAP.setPickMarker([lat,lng]); markPickSaved(true);
+  }else{
+    pickLL=null; MAP.clearPickMarker(); markPickSaved(false);
+  }
   hintEl=document.createElement('div');
   hintEl.className='maphint';
-  hintEl.innerHTML='<span>지도를 눌러 위치를 지정하세요</span><button type="button">취소</button>';
-  hintEl.querySelector('button').onclick=e=>{ e.stopPropagation(); cancelPick(); };
+  hintEl.innerHTML='<span>지도를 눌러 위치를 고르세요</span><button type="button">완료</button>';
+  hintEl.querySelector('button').onclick=e=>{ e.stopPropagation(); finishPick(); };
   document.getElementById('map').appendChild(hintEl);
 }
-function cancelPick(){ const it=pickItem; endPick(); openEdit(it, true); }
+
+// 지도를 누를 때마다 미리보기 핀만 옮긴다. 몇 번이든 다시 눌러 조정할 수 있다.
+function onPickMapClick(ll){
+  pickLL = {lat:ll.lat, lng:ll.lng};
+  MAP.setPickMarker([ll.lat, ll.lng]);
+  markPickSaved(false);   // 아직 확정 전 → 버튼을 진하게
+}
+
+// 지도 우측 "위치 저장" 버튼. 마지막으로 누른 좌표를 폼에 확정한다.
+function savePickedLocation(){
+  if(!pickLL) return toast('먼저 지도를 눌러 위치를 고르세요');
+  document.getElementById('fLat').value = pickLL.lat.toFixed(5);
+  document.getElementById('fLng').value = pickLL.lng.toFixed(5);
+  updateLocStat();
+  markPickSaved(true);
+  toast('위치를 저장했습니다');
+}
+
+// 완료: 확정 안 한 좌표가 남아 있으면 같이 확정하고 편집 폼으로 돌아간다
+// (눌러만 두고 저장을 깜빡했을 때 조용히 잃지 않도록).
+function finishPick(){
+  if(pickLL) savePickedLocation();
+  const it=pickItem; endPick(); openEdit(it, true);
+}
+
 function endPick(){
-  pickMode=null; pickItem=null;
+  pickMode=null; pickItem=null; pickLL=null;
   document.body.classList.remove('picking');
+  MAP.clearPickMarker(); markPickSaved(false);
   if(hintEl){hintEl.remove();hintEl=null;}
 }
 document.getElementById('btnPickHere').onclick=startPick;
@@ -2179,9 +2255,14 @@ function toast(m){
 async function refreshOsrm(){ if(await fetchOsrm()) render(); }
 
 // 고정된 지도(#mapWrap)가 헤더 바로 밑에 붙도록 헤더 실제 높이를 CSS 변수로 넘긴다.
+// --pinned-h(헤더+지도)는 scroll-margin-top 에 쓴다. 브라우저가 스스로 요소를 스크롤해
+// 보여줄 때(입력칸에 포커스가 갈 때 등) 이게 없으면 고정된 지도 밑에 가려진다.
 function measureHeader(){
-  const h = document.querySelector('header').getBoundingClientRect().height;
-  document.documentElement.style.setProperty('--hdr-h', Math.round(h) + 'px');
+  const hdr = document.querySelector('header').getBoundingClientRect().height;
+  const map = document.getElementById('mapWrap').getBoundingClientRect().height;
+  const st = document.documentElement.style;
+  st.setProperty('--hdr-h', Math.round(hdr) + 'px');
+  st.setProperty('--pinned-h', Math.round(hdr + map) + 'px');
 }
 measureHeader();
 

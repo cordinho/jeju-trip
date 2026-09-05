@@ -67,6 +67,18 @@ body.picking .mm-mk{pointer-events:none}
   font-size:11px;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.35);border:2px solid #fff;white-space:nowrap}
 .pin.wide{padding:0 8px}
 .pin.sel{background:var(--lava)}
+/* 위치를 고르는 동안 보여주는 미리보기 핀 */
+.pin.pick{background:var(--tangerine);width:28px;height:28px;font-size:15px;
+  box-shadow:0 0 0 4px rgba(238,108,18,.25),0 1px 4px rgba(0,0,0,.35)}
+
+/* 지도 우측 "위치 저장" 버튼 - 위치를 고르는 동안에만 보인다 */
+.mappicksave{display:none}
+body.picking .mappicksave{display:block}
+.mappicksave a{display:block;padding:8px 12px;border-radius:999px;
+  background:var(--ink);color:#fff;font-size:12px;font-weight:700;text-decoration:none;
+  white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,.3);transition:opacity .15s}
+/* 확정된 뒤에는 흐리게 해서 "지금 좌표는 저장됨"을 알린다 */
+.mappicksave.saved a{opacity:.45}
 .mm-off{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:1000;
   background:rgba(20,26,27,.82);color:#fff;font-size:11px;padding:5px 11px;border-radius:999px;
   white-space:nowrap;cursor:pointer}
@@ -108,6 +120,9 @@ body.viewonly main{padding-bottom:20px}
 main{padding:10px 12px 8px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
   display:flex;gap:10px;padding:10px 12px;align-items:flex-start}
+/* 지도가 화면 위에 고정돼 있으므로, 브라우저가 알아서 스크롤할 때(입력칸 포커스 등)
+   그 높이만큼 여유를 둬야 요소가 지도 밑에 숨지 않는다. --pinned-h 는 10-main.js 가 넣는다. */
+.card,.inp,.edbody .actions{scroll-margin-top:calc(var(--pinned-h,0px) + 10px)}
 .card.sel{border-color:var(--lava);box-shadow:0 0 0 2px rgba(168,64,44,.15)}
 /* 인라인 편집: 카드를 flex-wrap 시키고 폼을 100% 폭으로 아랫줄에 떨어뜨린다 */
 .card.open{flex-wrap:wrap;border-color:var(--ink);box-shadow:0 0 0 2px rgba(20,26,27,.10)}

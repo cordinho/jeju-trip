@@ -25,6 +25,26 @@ fitCtl.onAdd = () => {
 };
 fitCtl.addTo(leafletMap);
 
+/* ---- 위치 지정용 "위치 저장" 버튼 (지도 우측, 찍는 동안에만 보임) ---- */
+// 예전에는 지도를 한 번 누르면 곧바로 좌표가 확정되고 폼으로 돌아가 버려서, 조금 빗나가면
+// 처음부터 다시 해야 했다. 지금은 몇 번이든 눌러 미리보기 핀을 옮긴 뒤 이 버튼으로 확정한다.
+let pickSaveEl = null;
+const pickCtl = L.control({ position: 'topright' });
+pickCtl.onAdd = () => {
+  const d = L.DomUtil.create('div', 'mappicksave');
+  d.innerHTML = '<a href="#" role="button">위치 저장</a>';
+  L.DomEvent.disableClickPropagation(d);
+  L.DomEvent.on(d, 'click', e => { e.preventDefault(); savePickedLocation(); });
+  pickSaveEl = d;
+  return d;
+};
+// addTo 는 지도 높이 컨트롤(⛶) 다음에 한다 - 컨트롤은 추가한 순서대로 쌓이는데, 이 버튼은
+// 위치를 고를 때만 나타나므로 중간에 끼면 나타날 때마다 아래 버튼이 밀려 내려간다.
+// 확정된 상태면 버튼을 흐리게 해 "지금 좌표는 저장됨"을 보여준다.
+function markPickSaved(saved){
+  if(pickSaveEl) pickSaveEl.classList.toggle('saved', !!saved);
+}
+
 /* ---- 지도 높이 조절 (드래그 핸들 + 전체화면 토글) ---- */
 // 기기별 화면 크기가 다르고, 지도를 크게 보고 싶을 때와 일정 목록이 더 필요할 때가 갈리므로
 // 핸들로 자유롭게 조절하고 마지막 값은 window.storage 에 남긴다 (기기별 로컬 취향이라 방/공유
@@ -87,10 +107,12 @@ fitCtl.addTo(leafletMap);
   fullCtl.addTo(leafletMap);
 })();
 
+pickCtl.addTo(leafletMap);   // 우측 버튼 묶음의 맨 아래에 오도록 마지막에 붙인다
+
 const MAP = (function(){
   let clickCb = null;
   const lines = [], markers = [];
-  let lastBounds = null, allPts = null;
+  let lastBounds = null, allPts = null, pickMk = null;
 
   leafletMap.on('click', e => { clickCb && clickCb({ lat: e.latlng.lat, lng: e.latlng.lng }); });
 
@@ -137,20 +159,24 @@ const MAP = (function(){
       else if(lastBounds) leafletMap.fitBounds(lastBounds);
     },
     resize(){ leafletMap.invalidateSize(); },
-    redraw(){ /* Leaflet 레이어는 addLine/addMarker 시점에 바로 반영되어 별도 재계산이 필요 없다 */ }
+    redraw(){ /* Leaflet 레이어는 addLine/addMarker 시점에 바로 반영되어 별도 재계산이 필요 없다 */ },
+
+    // 위치를 찍는 동안 보여줄 미리보기 핀. markers 배열에 넣지 않아 clear() 로 지워지지
+    // 않는다 - 찍는 도중 목록이 다시 그려져도 핀이 사라지면 안 되기 때문이다.
+    setPickMarker(ll){
+      if(pickMk){ pickMk.setLatLng(ll); return; }
+      pickMk = L.marker(ll, {
+        icon: L.divIcon({ html:'<div class="pin pick"><span>+</span></div>', className:'mm-mk', iconSize:[0,0] }),
+        interactive: false, zIndexOffset: 1000
+      }).addTo(leafletMap);
+    },
+    clearPickMarker(){ if(pickMk){ pickMk.remove(); pickMk=null; } }
   };
   return api;
 })();
 
-MAP.on('click', ll=>{
-  if(!pickMode) return;
-  document.getElementById('fLat').value = ll.lat.toFixed(5);
-  document.getElementById('fLng').value = ll.lng.toFixed(5);
-  const it = pickItem;
-  endPick();
-  openEdit(it, true);
-  toast('위치를 지정했습니다');
-});
+// 찍는 동안에는 확정하지 않고 미리보기 핀만 옮긴다. 확정은 "위치 저장" 버튼이 한다.
+MAP.on('click', ll=>{ if(pickMode) onPickMapClick(ll); });
 
 let hintEl = null;
 
