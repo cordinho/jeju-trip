@@ -13,7 +13,10 @@
   --r:14px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%}
+/* body 에 height:100% 를 주면 안 된다. sticky 요소는 부모 박스 안에서만 붙어 있는데,
+   높이가 화면 한 개로 고정되면 헤더·지도가 한 화면만 지나면 떨어져 나간다.
+   내용만큼 자라도록 두고 배경은 min-height:100vh 로 채운다. */
+html,body{margin:0}
 body{
   background:var(--bg);color:var(--ink);
   font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Noto Sans KR",system-ui,sans-serif;
@@ -43,6 +46,11 @@ header{padding:env(safe-area-inset-top) 0 0;background:var(--surface);border-bot
 .daytab[aria-selected="true"] small{color:#A8B6B6}
 
 /* ---------- map (Leaflet) ---------- */
+/* 목록을 내려도 지도가 따라오도록 지도+크기조절 손잡이를 함께 고정한다.
+   position:fixed 는 안드로이드 인앱 웹뷰에서 뷰포트를 잘못 잡는 전례가 있어 금지(CLAUDE.md).
+   sticky 는 문서 흐름을 유지해 그 문제가 없다. top 은 헤더 높이만큼 띄워야 헤더 밑에
+   정확히 붙는데, 헤더 높이가 기기마다 달라 --hdr-h 를 10-main.js 가 실측해 넣어준다. */
+#mapWrap{position:sticky;top:var(--hdr-h,0px);z-index:500;background:var(--surface)}
 #map{height:300px;height:40vh;min-height:180px;max-height:75vh;position:relative;
   background:#DCE4E2}
 @supports (height:1dvh){#map{height:38dvh}}

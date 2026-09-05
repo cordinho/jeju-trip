@@ -48,8 +48,18 @@ function openEdit(item, keepCoords, insertPos){
   updateLocStat();
   editOpen = true;
   render();   // 렌더가 edBody 를 해당 카드 안으로 옮겨 펼친다
-  const openCard = document.querySelector('.card.open');
-  if(openCard) openCard.scrollIntoView({behavior:'smooth', block:'nearest'});
+  scrollBelowPinned(document.querySelector('.card.open'));
+}
+
+// 헤더와 지도가 화면 위에 고정돼 있으므로 scrollIntoView 를 그냥 쓰면 카드가 그 밑에
+// 가려진 채 "보인다"고 판정된다. 고정 영역 높이를 빼고 직접 스크롤 위치를 잡는다.
+function scrollBelowPinned(el){
+  if(!el) return;
+  const pinned = document.querySelector('header').getBoundingClientRect().height
+               + document.getElementById('mapWrap').getBoundingClientRect().height;
+  const r = el.getBoundingClientRect();
+  if(r.top < pinned + 4 || r.top > window.innerHeight - 80)
+    window.scrollTo({top: window.scrollY + r.top - pinned - 8, behavior:'smooth'});
 }
 
 // 좌표 입력칸을 없앤 대신(숫자를 직접 볼 필요가 없다), 위치가 있는지·어디인지를
@@ -160,13 +170,12 @@ async function doSearch(){
 }
 
 /* 지도에서 위치 찍기 */
-// 편집 폼은 그대로 펼쳐 둔 채 화면만 지도로 올린다 (인라인이라 시트처럼 닫을 필요가 없다).
+// 지도가 화면 위에 고정돼 있어 스크롤을 옮길 필요 없이 그 자리에서 바로 찍으면 된다.
 // 픽 시작 시점의 편집 대상을 pickItem 에 따로 잡아둔다 - 픽 도중 날짜 탭을 눌러
 // curItem 이 바뀌어도(=null) 원래 편집하던 항목으로 정확히 돌아가기 위해서다.
 let pickItem = null;
 function startPick(){
   pickMode=true; pickItem=curItem;
-  window.scrollTo({top:0, behavior:'smooth'});
   hintEl=document.createElement('div');
   hintEl.className='maphint';
   hintEl.innerHTML='<span>지도를 눌러 위치를 지정하세요</span><button type="button">취소</button>';

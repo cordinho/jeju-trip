@@ -28,7 +28,9 @@ Claude Code 가 이 저장소에서 작업할 때 먼저 읽는 문서. 규칙�
 
 3. **`position: fixed` 와 `height: 100dvh` 를 쓰지 말 것.**
    안드로이드 인앱 웹뷰에서 뷰포트를 잘못 잡아 화면이 잘린 전례가 있다.
-   일반 문서 흐름 + `position: sticky` 는 헤더에만.
+   대신 일반 문서 흐름 + `position: sticky` 를 쓴다 (헤더, 지도 `#mapWrap`, 하단 `.fab`).
+   `#mapWrap` 의 `top` 은 헤더 높이만큼 띄워야 하는데 기기마다 달라서, `10-main.js` 의
+   `measureHeader()` 가 실측해 `--hdr-h` 로 넣어준다. 헤더 구조를 바꾸면 이게 따라온다.
 
 4. **localStorage / sessionStorage 를 쓰지 말 것.** `window.storage` 를 쓴다 (없으면 메모리).
 
