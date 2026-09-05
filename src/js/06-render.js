@@ -48,9 +48,24 @@ function render_(fit){
   head.insertAdjacentHTML('beforeend', `<span style="margin-left:auto">${sc.rows.length}개 일정</span>`);
   L1.appendChild(head);
 
-  if(!sc.rows.length){
+  if(!sc.rows.length && !editOpen){
     L1.insertAdjacentHTML('beforeend', `<div class="empty">아직 비어 있는 날입니다.<br>아래 <b>일정 추가</b>나 상단 <b>추천 장소</b>로 채워보세요.</div>`);
   }
+
+  // 편집 폼(edBody)을 목록 안 제자리에 끼워 넣는다. 기존 일정이면 그 카드를 펼치고,
+  // 새 일정이면 저장될 위치(insertAt)에 빈 카드를 만들어 그 안에 넣는다.
+  const newAt = (editOpen && curItem && !curItem.id)
+    ? Math.max(0, Math.min(insertAt==null ? sc.rows.length : insertAt, sc.rows.length))
+    : -1;
+  let edPlaced = false;
+  function newEditCard(){
+    const w=document.createElement('div');
+    w.className='card open newitem';
+    w.appendChild(edBody);
+    edPlaced = true;
+    return w;
+  }
+  if(newAt === 0) L1.appendChild(newEditCard());
 
   sc.rows.forEach((r,i)=>{
     const c=document.createElement('div');
@@ -71,11 +86,17 @@ function render_(fit){
         <button data-up ${i===0?'disabled':''}>▲</button>
         <button data-down ${i===sc.rows.length-1?'disabled':''}>▼</button>
       </div>`;
-    const openThis=()=>{ focusItemPair(r.item, sc.rows[i+1]&&sc.rows[i+1].item); openEdit(r.item); };
+    const isOpen = editOpen && curItem && curItem.id && curItem.id===r.item.id;
+    const openThis=()=>{
+      if(isOpen) return closeEdit();   // 열려 있는 항목을 다시 누르면 접는다
+      focusItemPair(r.item, sc.rows[i+1]&&sc.rows[i+1].item);
+      openEdit(r.item);
+    };
     c.querySelector('.body').onclick=openThis;
     c.querySelector('.time').onclick=openThis;
     c.querySelector('[data-up]').onclick=e=>{e.stopPropagation();move(i,-1)};
     c.querySelector('[data-down]').onclick=e=>{e.stopPropagation();move(i,1)};
+    if(isOpen){ c.classList.add('open'); c.appendChild(edBody); edPlaced=true; }
     L1.appendChild(c);
 
     if(i<sc.rows.length-1){
@@ -93,7 +114,15 @@ function render_(fit){
       }
       L1.appendChild(d);
     }
+    if(newAt === i+1) L1.appendChild(newEditCard());
   });
+
+  // 편집 중이던 항목이 이 날 목록에 없으면(날짜 전환·삭제·가져오기 등) 폼을 원위치로 돌린다.
+  // 안 그러면 innerHTML='' 로 떨어져 나간 채 화면 어디에도 없는 상태가 된다.
+  if(editOpen && !edPlaced){ editOpen=false; edGoHome(); }
+  // 편집 중에는 하단 고정 버튼(추천 장소·일정 추가)을 숨긴다 - 폼이 목록 안에 있어서
+  // 그대로 두면 저장·닫기 버튼 위에 겹쳐 앉는다.
+  document.body.classList.toggle('editing', editOpen);
 
   drawMap(sc, fit);
 }

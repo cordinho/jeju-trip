@@ -4,29 +4,24 @@
 
 /* ══════════════ 시트 ══════════════ */
 const scrim=document.getElementById('scrim');
-function openSheet(id){
-  // 편집 시트만 스크림 없이 연다 - 항목을 눌렀을 때 지도가 어두워지지 않고 계속 보이게 하려고.
-  if(id!=='sheetEdit') scrim.classList.add('on');
-  document.getElementById(id).classList.add('on');
-}
+function openSheet(id){ scrim.classList.add('on'); document.getElementById(id).classList.add('on'); }
 function closeSheets(){ scrim.classList.remove('on'); document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on')); }
 scrim.onclick=closeSheets;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
 
-// 편집 시트가 지도를 가리지 않도록, 지도 아래 남는 공간만큼만 시트 높이를 잡는다.
-// 지도 크기를 드래그/전체화면으로 바꿀 때도 다시 불러야 해서(05-map.js 의 setH) 전역 함수로 둔다.
-function fitSheetToMap(){
-  const sheet = document.getElementById('sheetEdit');
-  const mapBottom = mapEl.getBoundingClientRect().bottom;
-  const avail = window.innerHeight - mapBottom - 8;
-  sheet.style.maxHeight = Math.max(240, Math.min(avail, window.innerHeight*.7)) + 'px';
-}
+/* ══════════════ 인라인 편집 폼 ══════════════ */
+// 편집 폼은 시트가 아니라 목록 안에서 해당 카드만 펼쳐 보여준다 - 다른 일정이 계속 보여야
+// 앞뒤 시간을 확인하면서 고칠 수 있기 때문이다. edBody 노드 하나를 렌더할 때마다 카드 안으로
+// 옮겨 넣는 방식이라, 다시 그려도 입력 중이던 값이 그대로 남는다.
+const edBody = document.getElementById('edBody');
+function edGoHome(){ document.getElementById('edHome').appendChild(edBody); }
+function closeEdit(){ editOpen=false; edGoHome(); render(); }
 
 function openEdit(item, keepCoords, insertPos){
   if(!canEdit()) return toast('조회 전용입니다. 편집 링크로 열어주세요');
   curItem = item || {id:null,name:'',lat:null,lng:null,stay:60,fix:null,note:''};
   const isNew = !item || !item.id;
-  // keepCoords는 지도 찍기 후 같은 시트를 다시 여는 경우다. 이때는 직전에 정한
+  // keepCoords는 지도 찍기 후 같은 폼으로 되돌아오는 경우다. 이때는 직전에 정한
   // 삽입 위치(insertAt)를 그대로 유지해야 한다 - 아니면 지도로 위치를 찍는 순간
   // "일정 사이에 추가"가 "맨 뒤에 추가"로 바뀌는 버그가 생긴다.
   if(!keepCoords) insertAt = (isNew && insertPos!=null) ? insertPos : null;
@@ -51,14 +46,10 @@ function openEdit(item, keepCoords, insertPos){
   }
   document.getElementById('btnDel').style.display = isNew?'none':'block';
   updateLocStat();
-  // 목록을 스크롤해서 아래쪽 항목을 눌렀을 수도 있으니, 시트를 열 때 맨 위(지도)로 먼저
-  // 되돌린 다음에 fitSheetToMap 을 불러야 한다 - 스크롤 전에 재면 지도가 화면 밖에 있어서
-  // "남는 공간"을 잘못 계산해 시트가 지도를 도로 덮어버린다. behavior:'smooth' 를 안 쓰는
-  // 것도 같은 이유 - 애니메이션 도중 위치를 재면 또 틀어진다.
-  window.scrollTo(0, 0);
-  fitSheetToMap();
-  openSheet('sheetEdit');
-  render();
+  editOpen = true;
+  render();   // 렌더가 edBody 를 해당 카드 안으로 옮겨 펼친다
+  const openCard = document.querySelector('.card.open');
+  if(openCard) openCard.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 // 좌표 입력칸을 없앤 대신(숫자를 직접 볼 필요가 없다), 위치가 있는지·어디인지를
@@ -108,14 +99,17 @@ document.getElementById('btnSave').onclick=()=>{
   else if(insertAt!=null && insertAt>=0 && insertAt<=arr.length) arr.splice(insertAt,0,o);
   else arr.push(o);
   insertAt=null;
-  curItem=o; save(); closeSheets(); render(true); refreshOsrm();
+  curItem=o; editOpen=false; edGoHome();
+  save(); render(true); refreshOsrm();
   toast(idx>=0?'수정했습니다':'추가했습니다');
 };
+document.getElementById('btnCancel').onclick=()=>{ insertAt=null; curItem=null; closeEdit(); };
 document.getElementById('btnDel').onclick=()=>{
   const arr=S.days[curDay].items;
   const idx=arr.findIndex(x=>x.id===curItem.id);
   if(idx>=0) arr.splice(idx,1);
-  curItem=null; save(); closeSheets(); render(true); toast('삭제했습니다');
+  curItem=null; editOpen=false; edGoHome();
+  save(); render(true); toast('삭제했습니다');
 };
 
 /* 검색 (Nominatim) */
@@ -166,13 +160,13 @@ async function doSearch(){
 }
 
 /* 지도에서 위치 찍기 */
-// 시트를 닫고 지도를 탭하게 하는데, 원래는 되돌아갈 방법이 없었다 - 지도를 보다가
-// 마음이 바뀌어도 아무 데나 눌러야만 편집 시트로 돌아갈 수 있었다. 취소 버튼을 추가하고,
+// 편집 폼은 그대로 펼쳐 둔 채 화면만 지도로 올린다 (인라인이라 시트처럼 닫을 필요가 없다).
 // 픽 시작 시점의 편집 대상을 pickItem 에 따로 잡아둔다 - 픽 도중 날짜 탭을 눌러
 // curItem 이 바뀌어도(=null) 원래 편집하던 항목으로 정확히 돌아가기 위해서다.
 let pickItem = null;
 function startPick(){
-  pickMode=true; pickItem=curItem; closeSheets();
+  pickMode=true; pickItem=curItem;
+  window.scrollTo({top:0, behavior:'smooth'});
   hintEl=document.createElement('div');
   hintEl.className='maphint';
   hintEl.innerHTML='<span>지도를 눌러 위치를 지정하세요</span><button type="button">취소</button>';

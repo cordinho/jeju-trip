@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#141A1B">
-<title>제주 10.29-11.01</title>
+<title>아기 메머드의 제주 여행</title>
 <link rel="stylesheet" href="vendor/leaflet.css">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -13,7 +13,7 @@
 <header>
   <div class="hrow">
     <div>
-      <div class="title">제주 · 하도리</div>
+      <div class="title">아기 메머드의 제주 여행</div>
       <div class="sub">2026.10.29 – 11.01</div>
     </div>
     <div class="spacer"></div>
@@ -39,10 +39,12 @@
 
 <div class="scrim" id="scrim"></div>
 
-<!-- 편집 시트 -->
-<div class="sheet" id="sheetEdit">
-  <div class="shead"><h2 id="edTitle">일정</h2><button class="iconbtn" data-close>닫기</button></div>
-  <div class="sbody">
+<!-- 편집 폼. 시트가 아니라 목록의 해당 카드 안으로 옮겨 넣어 인라인으로 펼친다.
+     (06-render.js 가 매 렌더마다 이 노드를 카드 안으로 이동시킨다. 노드를 새로 만들지 않고
+      그대로 옮기기 때문에 입력 중이던 값이 다시 그려도 살아남는다.) -->
+<div id="edHome" hidden>
+  <div class="edbody" id="edBody">
+    <div class="edtitle" id="edTitle">일정</div>
     <label class="f"><span>장소 · 일정 이름</span>
       <input class="inp" id="fName" placeholder="예: 비자림"></label>
 
@@ -91,6 +93,7 @@
       <textarea class="inp" id="fNote" rows="2" placeholder="예약번호, 오픈시간 등"></textarea></label>
 
     <div class="actions">
+      <button class="ghost" id="btnCancel">닫기</button>
       <button class="danger" id="btnDel">삭제</button>
       <button id="btnSave">저장</button>
     </div>

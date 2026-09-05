@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#141A1B">
-<title>제주 10.29-11.01</title>
+<title>아기 메머드의 제주 여행</title>
 <style>
 /* required styles */
 
@@ -753,6 +753,7 @@ header{padding:env(safe-area-inset-top) 0 0;background:var(--surface);border-bot
 .conflict button{font-size:12px;padding:6px 11px;border-radius:8px;border:1px solid #C1705C;background:#fff;color:#7A2C1B;margin-right:6px}
 .conflict button.pri{background:#7A2C1B;color:#fff;border-color:#7A2C1B}
 body.viewonly .ctrl,body.viewonly .fab,body.viewonly #btnAddTop,body.viewonly .insBtn{display:none}
+body.editing .fab{display:none}
 body.viewonly main{padding-bottom:20px}
 .linkbox{display:flex;gap:6px;margin-bottom:6px}
 .linkbox input{flex:1;font-size:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#F7F9F8}
@@ -771,6 +772,13 @@ main{padding:10px 12px 8px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
   display:flex;gap:10px;padding:10px 12px;align-items:flex-start}
 .card.sel{border-color:var(--lava);box-shadow:0 0 0 2px rgba(168,64,44,.15)}
+/* 인라인 편집: 카드를 flex-wrap 시키고 폼을 100% 폭으로 아랫줄에 떨어뜨린다 */
+.card.open{flex-wrap:wrap;border-color:var(--ink);box-shadow:0 0 0 2px rgba(20,26,27,.10)}
+.card.open.newitem{border-style:dashed}
+.edbody{flex:0 0 100%;width:100%;min-width:0;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
+.edtitle{font-size:12px;font-weight:700;color:var(--mute);margin-bottom:12px}
+.edbody .actions button{flex:1}
+#edHome{display:none}
 .time{width:52px;flex:none;padding-top:1px}
 .time .t{font-size:15px;font-weight:700;letter-spacing:-.02em}
 .time .e{font-size:11px;color:var(--mute)}
@@ -816,7 +824,6 @@ main{padding:10px 12px 8px}
   border-radius:18px 18px 0 0;max-height:92dvh;display:none;flex-direction:column;
   box-shadow:0 -8px 40px rgba(0,0,0,.25)}
 .sheet.on{display:flex}
-#sheetEdit{max-height:58dvh}
 .sheet header{background:none;border:0;padding:0}
 .shead{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 .shead h2{margin:0;font-size:16px;font-weight:700;flex:1;letter-spacing:-.02em}
@@ -864,7 +871,7 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
 <header>
   <div class="hrow">
     <div>
-      <div class="title">제주 · 하도리</div>
+      <div class="title">아기 메머드의 제주 여행</div>
       <div class="sub">2026.10.29 – 11.01</div>
     </div>
     <div class="spacer"></div>
@@ -890,10 +897,12 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
 
 <div class="scrim" id="scrim"></div>
 
-<!-- 편집 시트 -->
-<div class="sheet" id="sheetEdit">
-  <div class="shead"><h2 id="edTitle">일정</h2><button class="iconbtn" data-close>닫기</button></div>
-  <div class="sbody">
+<!-- 편집 폼. 시트가 아니라 목록의 해당 카드 안으로 옮겨 넣어 인라인으로 펼친다.
+     (06-render.js 가 매 렌더마다 이 노드를 카드 안으로 이동시킨다. 노드를 새로 만들지 않고
+      그대로 옮기기 때문에 입력 중이던 값이 다시 그려도 살아남는다.) -->
+<div id="edHome" hidden>
+  <div class="edbody" id="edBody">
+    <div class="edtitle" id="edTitle">일정</div>
     <label class="f"><span>장소 · 일정 이름</span>
       <input class="inp" id="fName" placeholder="예: 비자림"></label>
 
@@ -942,6 +951,7 @@ label.f>span{display:block;font-size:12px;color:var(--mute);margin-bottom:5px}
       <textarea class="inp" id="fNote" rows="2" placeholder="예약번호, 오픈시간 등"></textarea></label>
 
     <div class="actions">
+      <button class="ghost" id="btnCancel">닫기</button>
       <button class="danger" id="btnDel">삭제</button>
       <button id="btnSave">저장</button>
     </div>
@@ -1119,6 +1129,7 @@ const POIS = [
 let S = seed();
 let curDay = 0, curItem = null, pickMode = null; // pickMode: 'edit' | 'new'
 let insertAt = null; // 새 일정을 저장할 때 끼워 넣을 위치. null이면 맨 뒤에 추가
+let editOpen = false; // 편집 폼이 목록 안에 펼쳐져 있는가 (시트가 아니라 인라인이다)
 const legCache = {};
 
 /* ══════════════ 저장 ══════════════ */
@@ -1278,7 +1289,6 @@ fitCtl.addTo(leafletMap);
   function setH(px){
     mapEl.style.height = Math.max(minH(), Math.min(maxH(), Math.round(px))) + 'px';
     leafletMap.invalidateSize();
-    fitSheetToMap(); // 편집 시트가 열려 있는 동안 지도 크기를 바꿔도 겹치지 않게 다시 맞춘다
     try{ if(window.storage) window.storage.set(MAPH_KEY, mapEl.style.height); }catch(e){}
   }
 
@@ -1503,9 +1513,24 @@ function render_(fit){
   head.insertAdjacentHTML('beforeend', `<span style="margin-left:auto">${sc.rows.length}개 일정</span>`);
   L1.appendChild(head);
 
-  if(!sc.rows.length){
+  if(!sc.rows.length && !editOpen){
     L1.insertAdjacentHTML('beforeend', `<div class="empty">아직 비어 있는 날입니다.<br>아래 <b>일정 추가</b>나 상단 <b>추천 장소</b>로 채워보세요.</div>`);
   }
+
+  // 편집 폼(edBody)을 목록 안 제자리에 끼워 넣는다. 기존 일정이면 그 카드를 펼치고,
+  // 새 일정이면 저장될 위치(insertAt)에 빈 카드를 만들어 그 안에 넣는다.
+  const newAt = (editOpen && curItem && !curItem.id)
+    ? Math.max(0, Math.min(insertAt==null ? sc.rows.length : insertAt, sc.rows.length))
+    : -1;
+  let edPlaced = false;
+  function newEditCard(){
+    const w=document.createElement('div');
+    w.className='card open newitem';
+    w.appendChild(edBody);
+    edPlaced = true;
+    return w;
+  }
+  if(newAt === 0) L1.appendChild(newEditCard());
 
   sc.rows.forEach((r,i)=>{
     const c=document.createElement('div');
@@ -1526,11 +1551,17 @@ function render_(fit){
         <button data-up ${i===0?'disabled':''}>▲</button>
         <button data-down ${i===sc.rows.length-1?'disabled':''}>▼</button>
       </div>`;
-    const openThis=()=>{ focusItemPair(r.item, sc.rows[i+1]&&sc.rows[i+1].item); openEdit(r.item); };
+    const isOpen = editOpen && curItem && curItem.id && curItem.id===r.item.id;
+    const openThis=()=>{
+      if(isOpen) return closeEdit();   // 열려 있는 항목을 다시 누르면 접는다
+      focusItemPair(r.item, sc.rows[i+1]&&sc.rows[i+1].item);
+      openEdit(r.item);
+    };
     c.querySelector('.body').onclick=openThis;
     c.querySelector('.time').onclick=openThis;
     c.querySelector('[data-up]').onclick=e=>{e.stopPropagation();move(i,-1)};
     c.querySelector('[data-down]').onclick=e=>{e.stopPropagation();move(i,1)};
+    if(isOpen){ c.classList.add('open'); c.appendChild(edBody); edPlaced=true; }
     L1.appendChild(c);
 
     if(i<sc.rows.length-1){
@@ -1548,7 +1579,15 @@ function render_(fit){
       }
       L1.appendChild(d);
     }
+    if(newAt === i+1) L1.appendChild(newEditCard());
   });
+
+  // 편집 중이던 항목이 이 날 목록에 없으면(날짜 전환·삭제·가져오기 등) 폼을 원위치로 돌린다.
+  // 안 그러면 innerHTML='' 로 떨어져 나간 채 화면 어디에도 없는 상태가 된다.
+  if(editOpen && !edPlaced){ editOpen=false; edGoHome(); }
+  // 편집 중에는 하단 고정 버튼(추천 장소·일정 추가)을 숨긴다 - 폼이 목록 안에 있어서
+  // 그대로 두면 저장·닫기 버튼 위에 겹쳐 앉는다.
+  document.body.classList.toggle('editing', editOpen);
 
   drawMap(sc, fit);
 }
@@ -1568,29 +1607,24 @@ function move(i,dir){
 
 /* ══════════════ 시트 ══════════════ */
 const scrim=document.getElementById('scrim');
-function openSheet(id){
-  // 편집 시트만 스크림 없이 연다 - 항목을 눌렀을 때 지도가 어두워지지 않고 계속 보이게 하려고.
-  if(id!=='sheetEdit') scrim.classList.add('on');
-  document.getElementById(id).classList.add('on');
-}
+function openSheet(id){ scrim.classList.add('on'); document.getElementById(id).classList.add('on'); }
 function closeSheets(){ scrim.classList.remove('on'); document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on')); }
 scrim.onclick=closeSheets;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
 
-// 편집 시트가 지도를 가리지 않도록, 지도 아래 남는 공간만큼만 시트 높이를 잡는다.
-// 지도 크기를 드래그/전체화면으로 바꿀 때도 다시 불러야 해서(05-map.js 의 setH) 전역 함수로 둔다.
-function fitSheetToMap(){
-  const sheet = document.getElementById('sheetEdit');
-  const mapBottom = mapEl.getBoundingClientRect().bottom;
-  const avail = window.innerHeight - mapBottom - 8;
-  sheet.style.maxHeight = Math.max(240, Math.min(avail, window.innerHeight*.7)) + 'px';
-}
+/* ══════════════ 인라인 편집 폼 ══════════════ */
+// 편집 폼은 시트가 아니라 목록 안에서 해당 카드만 펼쳐 보여준다 - 다른 일정이 계속 보여야
+// 앞뒤 시간을 확인하면서 고칠 수 있기 때문이다. edBody 노드 하나를 렌더할 때마다 카드 안으로
+// 옮겨 넣는 방식이라, 다시 그려도 입력 중이던 값이 그대로 남는다.
+const edBody = document.getElementById('edBody');
+function edGoHome(){ document.getElementById('edHome').appendChild(edBody); }
+function closeEdit(){ editOpen=false; edGoHome(); render(); }
 
 function openEdit(item, keepCoords, insertPos){
   if(!canEdit()) return toast('조회 전용입니다. 편집 링크로 열어주세요');
   curItem = item || {id:null,name:'',lat:null,lng:null,stay:60,fix:null,note:''};
   const isNew = !item || !item.id;
-  // keepCoords는 지도 찍기 후 같은 시트를 다시 여는 경우다. 이때는 직전에 정한
+  // keepCoords는 지도 찍기 후 같은 폼으로 되돌아오는 경우다. 이때는 직전에 정한
   // 삽입 위치(insertAt)를 그대로 유지해야 한다 - 아니면 지도로 위치를 찍는 순간
   // "일정 사이에 추가"가 "맨 뒤에 추가"로 바뀌는 버그가 생긴다.
   if(!keepCoords) insertAt = (isNew && insertPos!=null) ? insertPos : null;
@@ -1615,14 +1649,10 @@ function openEdit(item, keepCoords, insertPos){
   }
   document.getElementById('btnDel').style.display = isNew?'none':'block';
   updateLocStat();
-  // 목록을 스크롤해서 아래쪽 항목을 눌렀을 수도 있으니, 시트를 열 때 맨 위(지도)로 먼저
-  // 되돌린 다음에 fitSheetToMap 을 불러야 한다 - 스크롤 전에 재면 지도가 화면 밖에 있어서
-  // "남는 공간"을 잘못 계산해 시트가 지도를 도로 덮어버린다. behavior:'smooth' 를 안 쓰는
-  // 것도 같은 이유 - 애니메이션 도중 위치를 재면 또 틀어진다.
-  window.scrollTo(0, 0);
-  fitSheetToMap();
-  openSheet('sheetEdit');
-  render();
+  editOpen = true;
+  render();   // 렌더가 edBody 를 해당 카드 안으로 옮겨 펼친다
+  const openCard = document.querySelector('.card.open');
+  if(openCard) openCard.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
 
 // 좌표 입력칸을 없앤 대신(숫자를 직접 볼 필요가 없다), 위치가 있는지·어디인지를
@@ -1672,14 +1702,17 @@ document.getElementById('btnSave').onclick=()=>{
   else if(insertAt!=null && insertAt>=0 && insertAt<=arr.length) arr.splice(insertAt,0,o);
   else arr.push(o);
   insertAt=null;
-  curItem=o; save(); closeSheets(); render(true); refreshOsrm();
+  curItem=o; editOpen=false; edGoHome();
+  save(); render(true); refreshOsrm();
   toast(idx>=0?'수정했습니다':'추가했습니다');
 };
+document.getElementById('btnCancel').onclick=()=>{ insertAt=null; curItem=null; closeEdit(); };
 document.getElementById('btnDel').onclick=()=>{
   const arr=S.days[curDay].items;
   const idx=arr.findIndex(x=>x.id===curItem.id);
   if(idx>=0) arr.splice(idx,1);
-  curItem=null; save(); closeSheets(); render(true); toast('삭제했습니다');
+  curItem=null; editOpen=false; edGoHome();
+  save(); render(true); toast('삭제했습니다');
 };
 
 /* 검색 (Nominatim) */
@@ -1730,13 +1763,13 @@ async function doSearch(){
 }
 
 /* 지도에서 위치 찍기 */
-// 시트를 닫고 지도를 탭하게 하는데, 원래는 되돌아갈 방법이 없었다 - 지도를 보다가
-// 마음이 바뀌어도 아무 데나 눌러야만 편집 시트로 돌아갈 수 있었다. 취소 버튼을 추가하고,
+// 편집 폼은 그대로 펼쳐 둔 채 화면만 지도로 올린다 (인라인이라 시트처럼 닫을 필요가 없다).
 // 픽 시작 시점의 편집 대상을 pickItem 에 따로 잡아둔다 - 픽 도중 날짜 탭을 눌러
 // curItem 이 바뀌어도(=null) 원래 편집하던 항목으로 정확히 돌아가기 위해서다.
 let pickItem = null;
 function startPick(){
-  pickMode=true; pickItem=curItem; closeSheets();
+  pickMode=true; pickItem=curItem;
+  window.scrollTo({top:0, behavior:'smooth'});
   hintEl=document.createElement('div');
   hintEl.className='maphint';
   hintEl.innerHTML='<span>지도를 눌러 위치를 지정하세요</span><button type="button">취소</button>';
@@ -2079,7 +2112,7 @@ async function refreshOsrm(){ if(await fetchOsrm()) render(); }
   render(true);
   if(ROOM.id){ await pull(false); startPolling(); applyRole(); }
   refreshOsrm();
-  const inval = ()=>{ try{ MAP.resize(); fitSheetToMap(); }catch(e){} };
+  const inval = ()=>{ try{ MAP.resize(); }catch(e){} };
   [0,120,400,900,1800].forEach(t=>setTimeout(inval,t));
   window.addEventListener('resize',inval);
   window.addEventListener('load',inval);

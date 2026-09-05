@@ -40,7 +40,6 @@ fitCtl.addTo(leafletMap);
   function setH(px){
     mapEl.style.height = Math.max(minH(), Math.min(maxH(), Math.round(px))) + 'px';
     leafletMap.invalidateSize();
-    fitSheetToMap(); // 편집 시트가 열려 있는 동안 지도 크기를 바꿔도 겹치지 않게 다시 맞춘다
     try{ if(window.storage) window.storage.set(MAPH_KEY, mapEl.style.height); }catch(e){}
   }
 

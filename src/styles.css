@@ -80,6 +80,7 @@ header{padding:env(safe-area-inset-top) 0 0;background:var(--surface);border-bot
 .conflict button{font-size:12px;padding:6px 11px;border-radius:8px;border:1px solid #C1705C;background:#fff;color:#7A2C1B;margin-right:6px}
 .conflict button.pri{background:#7A2C1B;color:#fff;border-color:#7A2C1B}
 body.viewonly .ctrl,body.viewonly .fab,body.viewonly #btnAddTop,body.viewonly .insBtn{display:none}
+body.editing .fab{display:none}
 body.viewonly main{padding-bottom:20px}
 .linkbox{display:flex;gap:6px;margin-bottom:6px}
 .linkbox input{flex:1;font-size:12px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#F7F9F8}
@@ -98,6 +99,13 @@ main{padding:10px 12px 8px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
   display:flex;gap:10px;padding:10px 12px;align-items:flex-start}
 .card.sel{border-color:var(--lava);box-shadow:0 0 0 2px rgba(168,64,44,.15)}
+/* 인라인 편집: 카드를 flex-wrap 시키고 폼을 100% 폭으로 아랫줄에 떨어뜨린다 */
+.card.open{flex-wrap:wrap;border-color:var(--ink);box-shadow:0 0 0 2px rgba(20,26,27,.10)}
+.card.open.newitem{border-style:dashed}
+.edbody{flex:0 0 100%;width:100%;min-width:0;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
+.edtitle{font-size:12px;font-weight:700;color:var(--mute);margin-bottom:12px}
+.edbody .actions button{flex:1}
+#edHome{display:none}
 .time{width:52px;flex:none;padding-top:1px}
 .time .t{font-size:15px;font-weight:700;letter-spacing:-.02em}
 .time .e{font-size:11px;color:var(--mute)}
@@ -143,7 +151,6 @@ main{padding:10px 12px 8px}
   border-radius:18px 18px 0 0;max-height:92dvh;display:none;flex-direction:column;
   box-shadow:0 -8px 40px rgba(0,0,0,.25)}
 .sheet.on{display:flex}
-#sheetEdit{max-height:58dvh}
 .sheet header{background:none;border:0;padding:0}
 .shead{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 .shead h2{margin:0;font-size:16px;font-weight:700;flex:1;letter-spacing:-.02em}

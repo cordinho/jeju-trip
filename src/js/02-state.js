@@ -6,6 +6,7 @@
 let S = seed();
 let curDay = 0, curItem = null, pickMode = null; // pickMode: 'edit' | 'new'
 let insertAt = null; // 새 일정을 저장할 때 끼워 넣을 위치. null이면 맨 뒤에 추가
+let editOpen = false; // 편집 폼이 목록 안에 펼쳐져 있는가 (시트가 아니라 인라인이다)
 const legCache = {};
 
 /* ══════════════ 저장 ══════════════ */
