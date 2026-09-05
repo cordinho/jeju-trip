@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#141A1B">
+<title>제주 10.29-11.01</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <div>
+      <div class="title">제주 · 하도리</div>
+      <div class="sub">2026.10.29 – 11.01</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="btnAddTop">+ 일정</button>
+    <button class="iconbtn" id="btnShare">공유</button>
+    <button class="iconbtn" id="btnSet">설정</button>
+  </div>
+  <div class="days" id="days" role="tablist"></div>
+</header>
+
+<div class="syncbar" id="syncbar" hidden></div>
+<div class="conflict" id="conflict" hidden></div>
+
+<div id="map"></div>
+<div class="maprsz" id="mapRsz" role="separator" aria-orientation="horizontal" aria-label="지도 크기 조절"><span></span></div>
+<div class="sum" id="sum"></div>
+<main id="list"></main>
+
+<div class="fab">
+  <button class="alt" id="btnPoi">추천 장소</button>
+  <button id="btnAdd">일정 추가</button>
+</div>
+
+<div class="scrim" id="scrim"></div>
+
+<!-- 편집 시트 -->
+<div class="sheet" id="sheetEdit">
+  <div class="shead"><h2 id="edTitle">일정</h2><button class="iconbtn" data-close>닫기</button></div>
+  <div class="sbody">
+    <label class="f"><span>장소 · 일정 이름</span>
+      <input class="inp" id="fName" placeholder="예: 비자림"></label>
+
+    <label class="f"><span>장소 검색 (OpenStreetMap)</span>
+      <div class="row">
+        <input class="inp" id="fSearch" placeholder="세화민속오일시장">
+        <button class="chip" id="btnSearch" style="flex:0 0 66px">검색</button>
+      </div></label>
+    <div class="res" id="results" style="display:none"></div>
+
+    <input type="hidden" id="fLat"><input type="hidden" id="fLng">
+    <div class="locstat">
+      <span id="locStatTxt">위치 미지정 — 이동시간 계산에서 제외됩니다</span>
+      <button type="button" id="btnLocClear" hidden>위치 삭제</button>
+    </div>
+    <button class="chip" id="btnPickHere" style="margin-bottom:14px">지도를 눌러 위치 지정</button>
+
+    <label class="f"><span>머무는 시간 (분)</span>
+      <input class="inp" id="fStay" type="number" min="0" step="5" value="60"></label>
+    <div class="chips" style="margin:-6px 0 14px">
+      <button class="chip" data-stay="0">0분</button>
+      <button class="chip" data-stay="30">30분</button>
+      <button class="chip" data-stay="60">1시간</button>
+      <button class="chip" data-stay="90">1.5시간</button>
+      <button class="chip" data-stay="120">2시간</button>
+    </div>
+
+    <label class="f"><span>다음 장소까지 이동수단</span></label>
+    <div class="chips" style="margin:-8px 0 16px">
+      <button class="chip" data-move="auto">자동</button>
+      <button class="chip" data-move="walk">도보</button>
+      <button class="chip" data-move="drive">자차</button>
+      <button class="chip" data-move="air">항공</button>
+      <button class="chip" data-move="ferry">배</button>
+      <button class="chip" data-move="none">계산 안 함</button>
+    </div>
+
+    <div class="switch">
+      <div><b>시각 고정</b><small>항공기·렌터카처럼 시간이 정해진 일정</small></div>
+      <button class="tg" id="fFixOn" aria-pressed="false"></button>
+    </div>
+    <label class="f" id="fixWrap" style="display:none;margin-top:12px"><span>고정 시각</span>
+      <input class="inp" id="fFix" type="time"></label>
+
+    <label class="f"><span>메모</span>
+      <textarea class="inp" id="fNote" rows="2" placeholder="예약번호, 오픈시간 등"></textarea></label>
+
+    <div class="actions">
+      <button class="danger" id="btnDel">삭제</button>
+      <button id="btnSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 공유 시트 -->
+<div class="sheet" id="sheetShare">
+  <div class="shead"><h2>공유</h2><button class="iconbtn" data-close>닫기</button></div>
+  <div class="sbody">
+    <label class="f"><span>내 이름 (누가 고쳤는지 표시됩니다)</span>
+      <input class="inp" id="fMe" placeholder="예: 지영"></label>
+
+    <div class="sect" style="border:0;margin-top:4px;padding-top:0">
+      <h3>공유 방</h3>
+      <p>방을 만들면 모두가 같은 일정을 봅니다. 한 사람이 고치면 다른 사람 화면은 10초 안에, 앱을 다시 열면 즉시 갱신됩니다.</p>
+      <div id="roomNone">
+        <button class="chip" id="btnRoomNew" style="width:100%;padding:13px;font-weight:700">공유 방 만들기</button>
+        <div style="height:10px"></div>
+        <div class="linkbox">
+          <input id="fJoinId" placeholder="방 ID 붙여넣기">
+          <button id="btnRoomJoin">참여</button>
+        </div>
+        <div class="linkbox">
+          <input id="fJoinPin" placeholder="편집 PIN (없으면 조회 전용)">
+        </div>
+      </div>
+      <div id="roomOn" hidden>
+        <p style="color:var(--ink-2)">방 ID <b id="roomIdTxt"></b></p>
+        <b style="font-size:13px">편집 링크</b>
+        <div class="linkbox"><input id="lnkEdit" readonly><button data-copy="lnkEdit">복사</button></div>
+        <b style="font-size:13px">조회 전용 링크</b>
+        <div class="linkbox"><input id="lnkView" readonly><button data-copy="lnkView">복사</button></div>
+        <div class="actions" style="margin-top:12px">
+          <button class="ghost" id="btnRoomLeave">방 나가기</button>
+          <button id="btnShareNative">링크 보내기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="sect">
+      <h3>스냅샷 링크</h3>
+      <p>지금 이 순간의 일정을 링크 자체에 통째로 담습니다. 서버를 전혀 쓰지 않아 어디서든 열리지만, 이후 수정은 반영되지 않는 조회 전용입니다.</p>
+      <div class="linkbox"><input id="lnkSnap" readonly><button data-copy="lnkSnap">복사</button></div>
+      <button class="chip" id="btnSnapMake">스냅샷 만들기</button>
+    </div>
+
+    <div class="sect">
+      <p style="margin:0">공유 방은 링크를 아는 사람만 접근합니다. 편집 PIN은 실수로 고치는 것을 막는 장치이지 암호화된 보안이 아닙니다. 민감한 정보는 넣지 마세요.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 추천 장소 시트 -->
+<div class="sheet" id="sheetPoi">
+  <div class="shead"><h2>추천 장소</h2><button class="iconbtn" data-close>닫기</button></div>
+  <div class="sbody">
+    <p class="hint">현재 선택한 날의 마지막 일정 뒤에 추가됩니다. 좌표는 대략값이니 검색으로 다듬으세요.</p>
+    <div id="poiList"></div>
+  </div>
+</div>
+
+<!-- 설정 시트 -->
+<div class="sheet" id="sheetSet">
+  <div class="shead"><h2>설정</h2><button class="iconbtn" data-close>닫기</button></div>
+  <div class="sbody">
+    <div class="switch">
+      <div><b>실제 도로 경로 사용</b><small>OSRM으로 자차 구간의 실거리·소요시간을 가져옵니다. 오프라인이면 추정치로 대체.</small></div>
+      <button class="tg" id="sOsrm" aria-pressed="false"></button>
+    </div>
+    <div style="height:14px"></div>
+    <label class="f"><span>도보 판정 기준 (km 이하)</span><input class="inp" id="sWalkKm" type="number" step="0.1" value="1"></label>
+    <div class="row">
+      <label class="f"><span>도보 속도 (km/h)</span><input class="inp" id="sWalkSp" type="number" step="0.5" value="4.5"></label>
+      <label class="f"><span>자차 평균 (km/h)</span><input class="inp" id="sDriveSp" type="number" step="1" value="40"></label>
+    </div>
+    <div class="row">
+      <label class="f"><span>직선→도로 보정 계수</span><input class="inp" id="sDetour" type="number" step="0.05" value="1.35"></label>
+      <label class="f"><span>주차·환승 여유 (분)</span><input class="inp" id="sBuffer" type="number" step="1" value="5"></label>
+    </div>
+    <div class="actions" style="margin-bottom:10px">
+      <button class="ghost" id="btnExport">내보내기</button>
+      <button class="ghost" id="btnImport">가져오기</button>
+      <button id="btnSaveSet">적용</button>
+    </div>
+    <p class="hint">내보내기로 받은 JSON을 다른 기기에서 가져오면 일정이 그대로 옮겨집니다. 홈 화면에 추가해두면 앱처럼 열립니다.</p>
+    <button class="chip" id="btnReset" style="color:var(--lava);border-color:var(--lava)">초기 일정으로 되돌리기</button>
+    <input type="file" id="fileIn" accept="application/json" hidden>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="vendor/leaflet.js"></script>
+<script src="js/01-seed.js"></script>
+<script src="js/02-state.js"></script>
+<script src="js/03-schedule.js"></script>
+<script src="js/05-map.js"></script>
+<script src="js/06-render.js"></script>
+<script src="js/07-editor.js"></script>
+<script src="js/08-settings.js"></script>
+<script src="js/09-sync.js"></script>
+<script src="js/10-main.js"></script>
+</body>
+</html>

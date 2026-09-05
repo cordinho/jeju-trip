@@ -1,0 +1,13 @@
+{
+  "name": "jeju-trip-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "2026 제주 가족여행 일정 플래너 — 외부 의존성 없는 단일 파일 웹앱",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs && node scripts/check.mjs",
+    "dev": "npx --yes http-server . -p 8080 -c-1 -o /src/",
+    "pages": "node scripts/build.mjs && node scripts/pages.mjs"
+  }
+}

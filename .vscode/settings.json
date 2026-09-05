@@ -1,0 +1,10 @@
+{
+  "files.encoding": "utf8",
+  "files.eol": "\n",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.formatOnSave": false,
+  "liveServer.settings.root": "/src",
+  "search.exclude": { "dist": true, "src/js/04-geo-data.js": true },
+  "files.associations": { "*.mjs": "javascript" }
+}

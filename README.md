@@ -1,0 +1,38 @@
+# 제주 여행 플래너
+
+2026.10.29 – 11.01 제주 가족여행 일정. 휴대폰용 단일 파일 웹앱.
+
+## 시작
+
+```bash
+npm run dev      # http://localhost:8080/src/ 에서 개발
+npm run build    # dist/index.html 한 장 생성
+npm run check    # 배포 전 검사
+```
+
+Node.js 만 있으면 된다. 설치할 패키지 없음.
+
+## 기능
+
+- 일정 추가·수정·순서 변경, 장소별 체류시간 지정
+- 구간별 이동시간 자동 계산 — 1km 이하는 도보, 초과는 자차 (기준값은 설정에서 조정)
+- 항공·배 구간은 시간 추정 없이 고정시각을 따름
+- 항공편·렌터카 같은 고정시각 일정과의 충돌을 경고
+- 지도 자동 연동 (Leaflet + OpenStreetMap 타일). 일정을 바꾸면 핀과 동선이 즉시 갱신
+- 공유 방으로 여러 명이 같은 일정을 봄. 편집·조회 권한 구분
+
+## 배포
+
+`dist/index.html` 하나만 있으면 된다.
+
+**GitHub Pages** — `npm run pages` 로 `docs/index.html` 을 만든 뒤 커밋·푸시. 저장소 Settings → Pages
+→ Branch: `main`, Folder: `/docs`. LTE/5G 등 외부 네트워크에서도 열리는 고정 URL이 생긴다.
+수정할 때마다 `npm run pages && git add docs && git commit -m "..." && git push` 반복.
+**파일 전달** — 그냥 보내면 된다. 받는 쪽은 브라우저로 열고 공유 방 ID 를 입력하면 동기화된다.
+
+휴대폰에서 주소를 연 뒤 "홈 화면에 추가" 하면 앱처럼 뜬다.
+
+## 데이터 출처
+
+지도: [Leaflet](https://leafletjs.com) (로컬 내장, CDN 아님) + OpenStreetMap 타일 — 항상 온라인 전제.
+장소 검색: Nominatim (제주·서울 지역만). 도로 경로: OSRM (설정에서 켜면 사용).
