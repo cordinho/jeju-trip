@@ -125,11 +125,13 @@ document.getElementById('btnDel').onclick=()=>{
 /* 검색 (Nominatim) */
 document.getElementById('btnSearch').onclick=doSearch;
 document.getElementById('fSearch').addEventListener('keydown',e=>{ if(e.key==='Enter'){e.preventDefault();doSearch();} });
-// 제주(여행지)와 서울(집)만 검색 대상으로 삼는다. 노미나팀 viewbox는 한 개의
+// 제주(여행지)와 수도권(집·출발지)만 검색 대상으로 삼는다. 노미나팀 viewbox는 한 개의
 // 사각형만 지정할 수 있어, 두 지역을 각각 bounded=1로 조회해 합친다.
+// 두 번째 상자는 원래 서울 시계에 딱 맞춰뒀는데, 경기·인천(김포공항 가는 길목)이 통째로
+// 빠져 집 주소가 검색되지 않는 일이 있었다. 수도권 전체로 넓혔다.
 const SEARCH_AREAS=[
   '126.10,33.60,126.99,33.10', // 제주
-  '126.70,37.72,127.20,37.40'  // 서울
+  '126.35,37.95,127.55,37.10'  // 수도권 (서울·인천·경기)
 ];
 async function doSearch(){
   const q=document.getElementById('fSearch').value.trim();
@@ -176,6 +178,9 @@ async function doSearch(){
 let pickItem = null;
 function startPick(){
   pickMode=true; pickItem=curItem;
+  // 핀 위를 누르면 그 핀의 항목이 선택돼 버려 위치 지정이 먹히지 않았다.
+  // 찍는 동안에는 핀이 클릭을 가로채지 않게 해 지도가 직접 받도록 한다.
+  document.body.classList.add('picking');
   hintEl=document.createElement('div');
   hintEl.className='maphint';
   hintEl.innerHTML='<span>지도를 눌러 위치를 지정하세요</span><button type="button">취소</button>';
@@ -183,5 +188,9 @@ function startPick(){
   document.getElementById('map').appendChild(hintEl);
 }
 function cancelPick(){ const it=pickItem; endPick(); openEdit(it, true); }
-function endPick(){ pickMode=null; pickItem=null; if(hintEl){hintEl.remove();hintEl=null;} }
+function endPick(){
+  pickMode=null; pickItem=null;
+  document.body.classList.remove('picking');
+  if(hintEl){hintEl.remove();hintEl=null;}
+}
 document.getElementById('btnPickHere').onclick=startPick;

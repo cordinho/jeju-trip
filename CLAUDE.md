@@ -32,7 +32,10 @@ Claude Code 가 이 저장소에서 작업할 때 먼저 읽는 문서. 규칙�
    `#mapWrap` 의 `top` 은 헤더 높이만큼 띄워야 하는데 기기마다 달라서, `10-main.js` 의
    `measureHeader()` 가 실측해 `--hdr-h` 로 넣어준다. 헤더 구조를 바꾸면 이게 따라온다.
 
-4. **localStorage / sessionStorage 를 쓰지 말 것.** `window.storage` 를 쓴다 (없으면 메모리).
+4. **localStorage / sessionStorage 를 직접 쓰지 말 것.** 저장은 전부 `window.storage` 로만 한다.
+   `js/00-storage.js` 가 어댑터다 — 호스트가 `window.storage` 를 주면 그대로 쓰고, 없으면
+   localStorage 로, 그것도 막히면 메모리로 떨어진다. **이 어댑터가 없으면 저장이 조용히
+   무시된다**: 실제로 GitHub Pages 에 올린 뒤 새로고침할 때마다 시드로 되돌아가는 버그가 났다.
 
 5. **하드코딩된 좌표는 추정치임을 표시할 것.** 특히 숙소(하도39)와 식당들.
 
@@ -43,6 +46,7 @@ src/
   index.html        마크업만. 스크립트 로드 순서를 여기서 정한다.
   styles.css        전체 스타일. CSS 변수는 :root 에.
   vendor/leaflet.js/.css  Leaflet 1.9.4 로컬 사본 (CDN 아님). npm install leaflet 로 재내려받기.
+  js/00-storage.js  window.storage 어댑터 (localStorage 폴백). 절대 규칙 4 참고
   js/01-seed.js     상수, 시드 일정, 추천 장소 목록
   js/02-state.js    전역 상태 S, 저장/로드
   js/03-schedule.js 시간 계산, 하버사인, 구간 판정, 스케줄 산출, OSRM
