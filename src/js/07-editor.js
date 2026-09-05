@@ -46,6 +46,7 @@ function openEdit(item, keepCoords, insertPos){
   }
   document.getElementById('btnDel').style.display = isNew?'none':'block';
   updateLocStat();
+  updateEdWhen();
   editOpen = true;
   render();   // 렌더가 edBody 를 해당 카드 안으로 옮겨 펼친다
   scrollBelowPinned(document.querySelector('.card.open'));
@@ -60,6 +61,44 @@ function scrollBelowPinned(el){
   const r = el.getBoundingClientRect();
   if(r.top < pinned + 4 || r.top > window.innerHeight - 80)
     window.scrollTo({top: window.scrollY + r.top - pinned - 8, behavior:'smooth'});
+}
+
+/* ── 앞 일정에서 계산된 시각 ──
+   목록에는 계산된 시각이 나오지만 편집 폼에는 없어서, 고정 시각을 넣으려면 앞 일정이
+   몇 시에 끝나는지 사용자가 직접 따져야 했다. 폼 위에 그 시각을 보여주고,
+   "시각 고정"을 켤 때 이 값을 미리 채운다. */
+const hhmm = m => {
+  m = ((Math.round(m) % 1440) + 1440) % 1440;   // 자정을 넘겨도 time 입력칸이 받는 형식으로
+  return String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+};
+
+// 이 일정이 앞 일정 기준으로 시작되는 시각(분). 새 일정이면 끼워 넣을 자리의 앞 일정이
+// 끝나는 시각을 쓴다 (좌표가 아직 없어 이동시간은 더하지 못한다).
+function scheduledStart(){
+  const day = S.days[curDay], sc = schedule(day);
+  if(curItem && curItem.id){
+    const r = sc.rows.find(x => x.item.id === curItem.id);
+    if(r) return {min:r.start, late:r.late, exact:true};
+  }
+  const idx = (insertAt==null) ? sc.rows.length : Math.max(0, Math.min(insertAt, sc.rows.length));
+  if(idx <= 0) return {min: toMin(day.start) ?? 9*60, late:0, exact:false};
+  const prev = sc.rows[idx-1];
+  return {min: prev ? prev.end : (toMin(day.start) ?? 9*60), late:0, exact:false};
+}
+
+function updateEdWhen(){
+  const el = document.getElementById('edWhen');
+  const s = scheduledStart();
+  const fixOn = document.getElementById('fFixOn').getAttribute('aria-pressed')==='true';
+  const fixVal = document.getElementById('fFix').value;
+  if(fixOn && fixVal){
+    el.innerHTML = `<b>${fixVal}</b> 에 고정된 일정입니다` +
+      (s.late ? ` · <span class="warn">앞 일정이 ${dur(s.late)} 늦게 끝납니다</span>` : '');
+  }else if(s.exact){
+    el.innerHTML = `앞 일정 기준 <b>${fmt(s.min)}</b> 시작`;
+  }else{
+    el.innerHTML = `앞 일정이 <b>${fmt(s.min)}</b> 에 끝납니다 <span style="color:var(--mute)">· 이동시간 별도</span>`;
+  }
 }
 
 // 좌표 입력칸을 없앤 대신(숫자를 직접 볼 필요가 없다), 위치가 있는지·어디인지를
@@ -81,7 +120,12 @@ document.getElementById('fFixOn').onclick=e=>{
   const on = e.currentTarget.getAttribute('aria-pressed')!=='true';
   e.currentTarget.setAttribute('aria-pressed', on);
   document.getElementById('fixWrap').style.display = on?'block':'none';
+  // 켤 때 비어 있으면 앞 일정에서 계산된 시각을 넣어준다. 직접 계산해 타이핑할 필요가 없다.
+  const f = document.getElementById('fFix');
+  if(on && !f.value) f.value = hhmm(scheduledStart().min);
+  updateEdWhen();
 };
+document.getElementById('fFix').onchange=updateEdWhen;
 document.querySelectorAll('[data-stay]').forEach(b=>b.onclick=()=>{
   document.getElementById('fStay').value=b.dataset.stay;
 });

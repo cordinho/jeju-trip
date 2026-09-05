@@ -128,7 +128,11 @@ main{padding:10px 12px 8px}
 .card.open{flex-wrap:wrap;border-color:var(--ink);box-shadow:0 0 0 2px rgba(20,26,27,.10)}
 .card.open.newitem{border-style:dashed}
 .edbody{flex:0 0 100%;width:100%;min-width:0;margin-top:10px;padding-top:12px;border-top:1px solid var(--line)}
-.edtitle{font-size:12px;font-weight:700;color:var(--mute);margin-bottom:12px}
+.edtitle{font-size:12px;font-weight:700;color:var(--mute);margin-bottom:10px}
+.edwhen{font-size:12px;color:var(--ink-2);background:var(--bg);border-radius:8px;
+  padding:8px 10px;margin-bottom:14px;line-height:1.5}
+.edwhen b{font-weight:700;color:var(--ink)}
+.edwhen .warn{color:var(--lava);font-weight:700}
 .edbody .actions button{flex:1}
 /* 시각 고정이 폼 맨 위로 올라오면서 아래 "머무는 시간"과 붙어 보인다.
    .switch:last-of-type 가 아래 테두리를 지우므로 여백으로만 끊어준다. */
