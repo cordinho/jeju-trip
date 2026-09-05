@@ -71,8 +71,9 @@ function render_(fit){
         <button data-up ${i===0?'disabled':''}>▲</button>
         <button data-down ${i===sc.rows.length-1?'disabled':''}>▼</button>
       </div>`;
-    c.querySelector('.body').onclick=()=>openEdit(r.item);
-    c.querySelector('.time').onclick=()=>openEdit(r.item);
+    const openThis=()=>{ focusItemPair(r.item, sc.rows[i+1]&&sc.rows[i+1].item); openEdit(r.item); };
+    c.querySelector('.body').onclick=openThis;
+    c.querySelector('.time').onclick=openThis;
     c.querySelector('[data-up]').onclick=e=>{e.stopPropagation();move(i,-1)};
     c.querySelector('[data-down]').onclick=e=>{e.stopPropagation();move(i,1)};
     L1.appendChild(c);

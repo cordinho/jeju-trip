@@ -143,6 +143,7 @@ main{padding:10px 12px 8px}
   border-radius:18px 18px 0 0;max-height:92dvh;display:none;flex-direction:column;
   box-shadow:0 -8px 40px rgba(0,0,0,.25)}
 .sheet.on{display:flex}
+#sheetEdit{max-height:58dvh}
 .sheet header{background:none;border:0;padding:0}
 .shead{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 .shead h2{margin:0;font-size:16px;font-weight:700;flex:1;letter-spacing:-.02em}

@@ -18,7 +18,7 @@ async function refreshOsrm(){ if(await fetchOsrm()) render(); }
   render(true);
   if(ROOM.id){ await pull(false); startPolling(); applyRole(); }
   refreshOsrm();
-  const inval = ()=>{ try{ MAP.resize(); }catch(e){} };
+  const inval = ()=>{ try{ MAP.resize(); fitSheetToMap(); }catch(e){} };
   [0,120,400,900,1800].forEach(t=>setTimeout(inval,t));
   window.addEventListener('resize',inval);
   window.addEventListener('load',inval);

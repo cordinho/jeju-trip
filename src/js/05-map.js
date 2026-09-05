@@ -40,6 +40,7 @@ fitCtl.addTo(leafletMap);
   function setH(px){
     mapEl.style.height = Math.max(minH(), Math.min(maxH(), Math.round(px))) + 'px';
     leafletMap.invalidateSize();
+    fitSheetToMap(); // 편집 시트가 열려 있는 동안 지도 크기를 바꿔도 겹치지 않게 다시 맞춘다
     try{ if(window.storage) window.storage.set(MAPH_KEY, mapEl.style.height); }catch(e){}
   }
 
@@ -153,6 +154,15 @@ MAP.on('click', ll=>{
 });
 
 let hintEl = null;
+
+// 일정 목록에서 항목을 누르면 편집 시트를 열면서 지도를 그 항목과 다음 항목
+// 두 곳만 보이도록 좁혀준다 (전체 동선을 다시 보려면 ⤢ 버튼을 누르면 된다).
+function focusItemPair(item, nextItem){
+  const pts = [item, nextItem].filter(Boolean).filter(it=>it.lat!=null).map(it=>[it.lat,it.lng]);
+  if(!pts.length) return;
+  if(pts.length===1) MAP.setView(pts[0], 15);
+  else MAP.fitBounds(pts, .35);
+}
 
 function drawMap(sc, fit){
   MAP.clear();

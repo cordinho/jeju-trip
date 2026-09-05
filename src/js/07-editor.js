@@ -4,10 +4,23 @@
 
 /* ══════════════ 시트 ══════════════ */
 const scrim=document.getElementById('scrim');
-function openSheet(id){ scrim.classList.add('on'); document.getElementById(id).classList.add('on'); }
+function openSheet(id){
+  // 편집 시트만 스크림 없이 연다 - 항목을 눌렀을 때 지도가 어두워지지 않고 계속 보이게 하려고.
+  if(id!=='sheetEdit') scrim.classList.add('on');
+  document.getElementById(id).classList.add('on');
+}
 function closeSheets(){ scrim.classList.remove('on'); document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on')); }
 scrim.onclick=closeSheets;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
+
+// 편집 시트가 지도를 가리지 않도록, 지도 아래 남는 공간만큼만 시트 높이를 잡는다.
+// 지도 크기를 드래그/전체화면으로 바꿀 때도 다시 불러야 해서(05-map.js 의 setH) 전역 함수로 둔다.
+function fitSheetToMap(){
+  const sheet = document.getElementById('sheetEdit');
+  const mapBottom = mapEl.getBoundingClientRect().bottom;
+  const avail = window.innerHeight - mapBottom - 8;
+  sheet.style.maxHeight = Math.max(240, Math.min(avail, window.innerHeight*.7)) + 'px';
+}
 
 function openEdit(item, keepCoords, insertPos){
   if(!canEdit()) return toast('조회 전용입니다. 편집 링크로 열어주세요');
@@ -38,6 +51,12 @@ function openEdit(item, keepCoords, insertPos){
   }
   document.getElementById('btnDel').style.display = isNew?'none':'block';
   updateLocStat();
+  // 목록을 스크롤해서 아래쪽 항목을 눌렀을 수도 있으니, 시트를 열 때 맨 위(지도)로 먼저
+  // 되돌린 다음에 fitSheetToMap 을 불러야 한다 - 스크롤 전에 재면 지도가 화면 밖에 있어서
+  // "남는 공간"을 잘못 계산해 시트가 지도를 도로 덮어버린다. behavior:'smooth' 를 안 쓰는
+  // 것도 같은 이유 - 애니메이션 도중 위치를 재면 또 틀어진다.
+  window.scrollTo(0, 0);
+  fitSheetToMap();
   openSheet('sheetEdit');
   render();
 }

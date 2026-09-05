@@ -816,6 +816,7 @@ main{padding:10px 12px 8px}
   border-radius:18px 18px 0 0;max-height:92dvh;display:none;flex-direction:column;
   box-shadow:0 -8px 40px rgba(0,0,0,.25)}
 .sheet.on{display:flex}
+#sheetEdit{max-height:58dvh}
 .sheet header{background:none;border:0;padding:0}
 .shead{display:flex;align-items:center;gap:10px;padding:14px 16px 10px;border-bottom:1px solid var(--line)}
 .shead h2{margin:0;font-size:16px;font-weight:700;flex:1;letter-spacing:-.02em}
@@ -1277,6 +1278,7 @@ fitCtl.addTo(leafletMap);
   function setH(px){
     mapEl.style.height = Math.max(minH(), Math.min(maxH(), Math.round(px))) + 'px';
     leafletMap.invalidateSize();
+    fitSheetToMap(); // 편집 시트가 열려 있는 동안 지도 크기를 바꿔도 겹치지 않게 다시 맞춘다
     try{ if(window.storage) window.storage.set(MAPH_KEY, mapEl.style.height); }catch(e){}
   }
 
@@ -1390,6 +1392,15 @@ MAP.on('click', ll=>{
 });
 
 let hintEl = null;
+
+// 일정 목록에서 항목을 누르면 편집 시트를 열면서 지도를 그 항목과 다음 항목
+// 두 곳만 보이도록 좁혀준다 (전체 동선을 다시 보려면 ⤢ 버튼을 누르면 된다).
+function focusItemPair(item, nextItem){
+  const pts = [item, nextItem].filter(Boolean).filter(it=>it.lat!=null).map(it=>[it.lat,it.lng]);
+  if(!pts.length) return;
+  if(pts.length===1) MAP.setView(pts[0], 15);
+  else MAP.fitBounds(pts, .35);
+}
 
 function drawMap(sc, fit){
   MAP.clear();
@@ -1515,8 +1526,9 @@ function render_(fit){
         <button data-up ${i===0?'disabled':''}>▲</button>
         <button data-down ${i===sc.rows.length-1?'disabled':''}>▼</button>
       </div>`;
-    c.querySelector('.body').onclick=()=>openEdit(r.item);
-    c.querySelector('.time').onclick=()=>openEdit(r.item);
+    const openThis=()=>{ focusItemPair(r.item, sc.rows[i+1]&&sc.rows[i+1].item); openEdit(r.item); };
+    c.querySelector('.body').onclick=openThis;
+    c.querySelector('.time').onclick=openThis;
     c.querySelector('[data-up]').onclick=e=>{e.stopPropagation();move(i,-1)};
     c.querySelector('[data-down]').onclick=e=>{e.stopPropagation();move(i,1)};
     L1.appendChild(c);
@@ -1556,10 +1568,23 @@ function move(i,dir){
 
 /* ══════════════ 시트 ══════════════ */
 const scrim=document.getElementById('scrim');
-function openSheet(id){ scrim.classList.add('on'); document.getElementById(id).classList.add('on'); }
+function openSheet(id){
+  // 편집 시트만 스크림 없이 연다 - 항목을 눌렀을 때 지도가 어두워지지 않고 계속 보이게 하려고.
+  if(id!=='sheetEdit') scrim.classList.add('on');
+  document.getElementById(id).classList.add('on');
+}
 function closeSheets(){ scrim.classList.remove('on'); document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on')); }
 scrim.onclick=closeSheets;
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
+
+// 편집 시트가 지도를 가리지 않도록, 지도 아래 남는 공간만큼만 시트 높이를 잡는다.
+// 지도 크기를 드래그/전체화면으로 바꿀 때도 다시 불러야 해서(05-map.js 의 setH) 전역 함수로 둔다.
+function fitSheetToMap(){
+  const sheet = document.getElementById('sheetEdit');
+  const mapBottom = mapEl.getBoundingClientRect().bottom;
+  const avail = window.innerHeight - mapBottom - 8;
+  sheet.style.maxHeight = Math.max(240, Math.min(avail, window.innerHeight*.7)) + 'px';
+}
 
 function openEdit(item, keepCoords, insertPos){
   if(!canEdit()) return toast('조회 전용입니다. 편집 링크로 열어주세요');
@@ -1590,6 +1615,12 @@ function openEdit(item, keepCoords, insertPos){
   }
   document.getElementById('btnDel').style.display = isNew?'none':'block';
   updateLocStat();
+  // 목록을 스크롤해서 아래쪽 항목을 눌렀을 수도 있으니, 시트를 열 때 맨 위(지도)로 먼저
+  // 되돌린 다음에 fitSheetToMap 을 불러야 한다 - 스크롤 전에 재면 지도가 화면 밖에 있어서
+  // "남는 공간"을 잘못 계산해 시트가 지도를 도로 덮어버린다. behavior:'smooth' 를 안 쓰는
+  // 것도 같은 이유 - 애니메이션 도중 위치를 재면 또 틀어진다.
+  window.scrollTo(0, 0);
+  fitSheetToMap();
   openSheet('sheetEdit');
   render();
 }
@@ -2048,7 +2079,7 @@ async function refreshOsrm(){ if(await fetchOsrm()) render(); }
   render(true);
   if(ROOM.id){ await pull(false); startPolling(); applyRole(); }
   refreshOsrm();
-  const inval = ()=>{ try{ MAP.resize(); }catch(e){} };
+  const inval = ()=>{ try{ MAP.resize(); fitSheetToMap(); }catch(e){} };
   [0,120,400,900,1800].forEach(t=>setTimeout(inval,t));
   window.addEventListener('resize',inval);
   window.addEventListener('load',inval);
