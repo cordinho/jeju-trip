@@ -12,7 +12,7 @@ function renderDays(){
     b.className='daytab'; b.setAttribute('role','tab');
     b.setAttribute('aria-selected', i===curDay);
     b.innerHTML=`<b>${d.label}</b><small>${d.dow} · ${d.items.length}곳</small>`;
-    b.onclick=()=>{ if(pickMode) endPick(); curDay=i; curItem=null; render(true); refreshOsrm(); };
+    b.onclick=()=>{ abortPick(false); curDay=i; curItem=null; render(true); refreshOsrm(); };
     el.appendChild(b);
   });
 }
@@ -119,7 +119,7 @@ function render_(fit){
 
   // 편집 중이던 항목이 이 날 목록에 없으면(날짜 전환·삭제·가져오기 등) 폼을 원위치로 돌린다.
   // 안 그러면 innerHTML='' 로 떨어져 나간 채 화면 어디에도 없는 상태가 된다.
-  if(editOpen && !edPlaced){ editOpen=false; edGoHome(); }
+  if(editOpen && !edPlaced){ abortPick(false); editOpen=false; edGoHome(); }
   // 편집 중에는 하단 고정 버튼(추천 장소·일정 추가)을 숨긴다 - 폼이 목록 안에 있어서
   // 그대로 두면 저장·닫기 버튼 위에 겹쳐 앉는다.
   document.body.classList.toggle('editing', editOpen);

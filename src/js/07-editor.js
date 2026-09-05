@@ -15,7 +15,7 @@ document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
 // 옮겨 넣는 방식이라, 다시 그려도 입력 중이던 값이 그대로 남는다.
 const edBody = document.getElementById('edBody');
 function edGoHome(){ document.getElementById('edHome').appendChild(edBody); }
-function closeEdit(){ editOpen=false; edGoHome(); render(); }
+function closeEdit(){ abortPick(false); editOpen=false; edGoHome(); render(); }
 
 function openEdit(item, keepCoords, insertPos){
   if(!canEdit()) return toast('조회 전용입니다. 편집 링크로 열어주세요');
@@ -90,6 +90,7 @@ document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>{
 });
 
 document.getElementById('btnSave').onclick=()=>{
+  abortPick(true);   // 지도에서 고르던 중이었다면 그 좌표까지 반영하고 찍기 모드를 끝낸다
   const name=document.getElementById('fName').value.trim();
   if(!name) return toast('이름을 입력하세요');
   const lat=parseFloat(document.getElementById('fLat').value);
@@ -115,6 +116,7 @@ document.getElementById('btnSave').onclick=()=>{
 };
 document.getElementById('btnCancel').onclick=()=>{ insertAt=null; curItem=null; closeEdit(); };
 document.getElementById('btnDel').onclick=()=>{
+  abortPick(false);
   const arr=S.days[curDay].items;
   const idx=arr.findIndex(x=>x.id===curItem.id);
   if(idx>=0) arr.splice(idx,1);
@@ -205,24 +207,45 @@ function onPickMapClick(ll){
   markPickSaved(false);   // 아직 확정 전 → 버튼을 진하게
 }
 
-// 지도 우측 "위치 저장" 버튼. 마지막으로 누른 좌표를 폼에 확정한다.
-function savePickedLocation(){
-  if(!pickLL) return toast('먼저 지도를 눌러 위치를 고르세요');
+// 고른 좌표를 폼에 확정만 한다 (화면 전환 없음).
+function commitPick(){
+  if(!pickLL) return false;
   document.getElementById('fLat').value = pickLL.lat.toFixed(5);
   document.getElementById('fLng').value = pickLL.lng.toFixed(5);
   updateLocStat();
+  return true;
+}
+
+// 지도 우측 "위치 저장" 버튼. 확정한 뒤 잠깐 흐려진 버튼을 보여주고 찍기 모드를 끝낸다
+// (안내 문구·저장 버튼·미리보기 핀이 모두 사라지고 편집 폼으로 돌아간다).
+let pickCloseT = null;
+function savePickedLocation(){
+  if(!commitPick()) return toast('먼저 지도를 눌러 위치를 고르세요');
   markPickSaved(true);
   toast('위치를 저장했습니다');
+  const it = pickItem;
+  clearTimeout(pickCloseT);
+  pickCloseT = setTimeout(()=>{ if(pickMode){ endPick(); openEdit(it, true); } }, 500);
 }
 
 // 완료: 확정 안 한 좌표가 남아 있으면 같이 확정하고 편집 폼으로 돌아간다
 // (눌러만 두고 저장을 깜빡했을 때 조용히 잃지 않도록).
 function finishPick(){
-  if(pickLL) savePickedLocation();
+  commitPick();
   const it=pickItem; endPick(); openEdit(it, true);
 }
 
+// 폼에서 저장/삭제/닫기를 누르거나 날짜를 바꾸면 찍기 모드도 같이 끝나야 한다.
+// 안 그러면 안내 문구와 "위치 저장" 버튼이 지도에 그대로 남는다.
+// keep=true 면 아직 확정 안 한 좌표를 먼저 폼에 반영한다 (폼 저장 직전에 쓴다).
+function abortPick(keep){
+  if(!pickMode) return;
+  if(keep) commitPick();
+  endPick();
+}
+
 function endPick(){
+  clearTimeout(pickCloseT);
   pickMode=null; pickItem=null; pickLL=null;
   document.body.classList.remove('picking');
   MAP.clearPickMarker(); markPickSaved(false);
